@@ -8,7 +8,6 @@ var opts = {
 	,"port": 8080
 };
 
-
 httpd = http.createServer(function(req, res) {
 	req.on("data", function(d) {
 		
@@ -28,7 +27,7 @@ httpd = http.createServer(function(req, res) {
 		  console.log(e);
 			res.writeHead(404, {'Content-Type': 'text/plain'});
 			res.write('404 Not Found\n');
-			res.end();
+			res.end("404: file not found or more likely, you're trying to go somewhere you can't.");
 			return;
 		  }
 			var s = fs.createReadStream("." + url.parse(req.url).pathname);
@@ -37,15 +36,13 @@ httpd = http.createServer(function(req, res) {
 				console.log(req.url);
 				console.log(e);
 				res.writeHead(404, {'Content-Type': 'text/plain'});
-				res.end("error");
+				res.end("404: file not found or more likely, you're trying to go somewhere you can't.");
 			});
 			s.once('fd', function() {
 				res.statusCode = 400;
 				
 			});
-			s.pipe(res);
-			//s.destroy();
-			//res.write("this is just a placeholder...needing some fancy HTML5 for awesometime.");
+			s.pipe(res);s
 			break;
 		case 1:
 			var max = url.parse(req.url,true).query.size;
@@ -65,7 +62,8 @@ httpd = http.createServer(function(req, res) {
 			res.end();
 			break;
 		default:
-			res.statusCode = 400
+			res.writeHead(400);
+			//res.statusCode = 400
 			res.write("fail");
 			res.end();
 	}

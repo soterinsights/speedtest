@@ -7,6 +7,8 @@
 var lock = false;
 var test_start = null;
 var test_results = null;
+var test_interval = null;
+
 $(document).ready(function() {
 	//runtests(1, null);
 });
@@ -32,12 +34,29 @@ function runtests(target_size, last_test) {
 	$("#current").html("Running "+target_size +"MB test");
 	
 	var start = new Date();
-	$.get('/download?size=' + target_size, function() {
+	/*$.get('/download?size=' + target_size, function() {
 		var end = new Date();
 		var r = {"Start": start, "End": end, "Diff": end.getTime() - start.getTime()};
 		var MBps = ((target_size*512*1024)/(r.Diff*1000));
 		$('#result').append("<p>"+target_size +"MB in "+r.Diff+"ms @ "+MBps.toString().substring(0,5)+"MBps or "+(MBps*8).toString().substring(0,5)+"Mbps</p>");
 		runtests(Math.ceil(target_size*1.5), r);
+	});*/
+	$.ajax('/download?size=' + target_size, {
+		success:  function() {
+			var end = new Date();
+			var r = {"Start": start, "End": end, "Diff": end.getTime() - start.getTime()};
+			var MBps = ((target_size*512*1024)/(r.Diff*1000));
+			$('#result').append("<p>"+target_size +"MB in "+r.Diff+"ms @ "+MBps.toString().substring(0,5)+"MBps or "+(MBps*8).toString().substring(0,5)+"Mbps</p>");
+			runtests(Math.ceil(target_size*1.5), r);
+		}
+		,xhr: function() {
+			//jQuery.ajaxSettings.xhr();
+			test_interval = setInterval(function() {
+			total = parseInt(xhr.getResponseHeader('Content-length'));
+			
+			}
+		}
+		
 	});
 }
 function testspeed(size, cb) {
