@@ -5,29 +5,38 @@
 
 //var target_size = 1;
 var lock = false;
-
+var test_start = null;
+var test_results = null;
 $(document).ready(function() {
-	//$("body").text("test");
-	//var tests = [];
-	runtests(1, null);
-	/*testspeed(50*2, function(r) {
-		$('#result').append("<p>"+50*2 +"MB in "+r.Diff+" milliseconds<br />" + r.Start + "<br />" + r.End +"</p>");
-	});*/
+	//runtests(1, null);
 });
-	
+function clearresults() {
+	$("#result").html("");
+}
 function runtests(target_size, last_test) {
+	
 	if(target_size > 50 || (last_test != null && last_test.Diff > 30000)) {
-		//end;
-		$('#result').append("<p>End</p>");
+		//end of all things;
+		//$('#result').append("<p>End</p>");
+		$("#current").html("Finished tests in " + ((new Date()).getTime() -test_start.getTime()) + "ms");
+		
+		test_start = null;
+		test_results = null;
 		return;
 	}
+	
+	if(test_start == null) {
+		test_start = new Date();
+	}
+	
+	$("#current").html("Running "+target_size +"MB test");
 	
 	var start = new Date();
 	$.get('/download?size=' + target_size, function() {
 		var end = new Date();
-		//cb({"Start": start, "End": end, "Diff": end.getTime() - start.getTime()});
 		var r = {"Start": start, "End": end, "Diff": end.getTime() - start.getTime()};
-		$('#result').append("<p>"+target_size +"MB in "+r.Diff+" milliseconds<br />" + r.Start + "<br />" + r.End +"</p>");
+		var MBps = ((target_size*512*1024)/(r.Diff*1000));
+		$('#result').append("<p>"+target_size +"MB in "+r.Diff+"ms @ "+MBps.toString().substring(0,5)+"MBps or "+(MBps*8).toString().substring(0,5)+"Mbps</p>");
 		runtests(Math.ceil(target_size*1.5), r);
 	});
 }
@@ -41,7 +50,9 @@ function testspeed(size, cb) {
 </script>
 </head>
 <body>
-	
+	<button value="Run" onclick="runtests(1, null)">Run</button>
+	<button value="Run" onclick="clearresults(1)">Clear results</button>
+	<div id="current" ></div>
 	<div id="result"></div>
 </body>
 </html>
