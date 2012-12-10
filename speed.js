@@ -13,12 +13,11 @@ httpd = http.createServer(function(req, res) {
 		
 	});
 	//http://thecodinghumanist.com/blog/archives/2011/5/6/serving-static-files-from-node-js
-	switch(opts.url.indexOf(url.parse(req.url).pathname)) {
+	switch(opts.url.indexOf(url.parse(req.url.replace("//","/")).pathname)) {
 		case 0:
 			res.writeHead(301, {'Location': "./speed.html"});
 			res.end();
 			break;
-		
 		case 3:
 		case 4:
 		case 5:
@@ -48,9 +47,9 @@ httpd = http.createServer(function(req, res) {
 		case 1:
 			var max = url.parse(req.url,true).query.size;
 			if(typeof(max) == 'undefined') { max = 1; }
-			res.writeHead(200, {'Content-length': (512*1024*max)});
+			res.writeHead(200, {'Content-length': (1024*1024*max)});
 			//res.write("download..prepare for X MB!\r\n");
-			var b = new Buffer(512);
+			var b = new Buffer(1024);
 			
 			//console.log(max);
 			for(var i = 0; i < 1024*max; i++) {
