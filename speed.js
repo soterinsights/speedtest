@@ -4,7 +4,7 @@ var fs = require("fs");
 
 
 var opts = {
-	"url": ["/","/download","/upload","/jquery.js","/speed.html"]
+	"url": ["/","/download","/upload","/jquery.js","/speed.html","/jquery.ajax-progress.js"]
 	,"port": 8080
 };
 
@@ -21,6 +21,7 @@ httpd = http.createServer(function(req, res) {
 		
 		case 3:
 		case 4:
+		case 5:
 			try {
 			stats = fs.lstatSync("."+url.parse(req.url).pathname); // throws if path doesn't exist
 		  } catch (e) {

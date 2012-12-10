@@ -1,0 +1,19 @@
+{
+  "name": "speedtest"
+  ,"preferGlobal": "true"
+  ,"author": "Josh Erickson <josh@snoj.us>"
+  ,"contributors": [ 
+    {
+      "name": "Josh Erickson",
+      "email": "josh@snoj.us"
+    } 
+  ]
+  ,"scripts": {
+  
+  }
+  ,"repository": {
+    "type": "git",
+    "url": "https://github.com/snoj/speedtest.git"
+  }
+  ,"license": "MIT"
+}

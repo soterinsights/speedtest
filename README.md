@@ -16,3 +16,6 @@ Observations/Bugs
 I seem to get max out at about 20MBps when using localhost on my Ubuntu laptop and about 5 on my Windows 8 laptop.
 
 
+Credits
+=========
+*[Jquery Ajax Progress](https://github.com/englercj/jquery-ajax-progress) by Chad Engler 
