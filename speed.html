@@ -7,55 +7,75 @@
 //var target_size = 1;
 var lock = false;
 var test_start = null;
-var test_results = null;
+var test_results = [];
 var test_interval = null;
-
+var xreq;
 $(document).ready(function() {
-	runtests(1, null);
+	$.get("./ip", function(res) {
+		$("#remoteip").text(res)
+	});
 });
 function clearresults() {
 	$("#result").html("");
 }
+function stoptests() {
+	try {
+		xreq.abort();
+	} catch(e) {}
+}
 function runtests(target_size, last_test) {
+	
+	if(test_results != null && test_results.length > 0) {
+		var slowest, fastest, average = null;
+		for(var i = 0; i < test_results.length; i++) {
+			slowest = (slowest == null || test_results[i].MBps < slowest.MBps) ? test_results[i] : slowest;
+			fastest = (fastest == null || test_results[i].MBps > fastest.MBps) ? test_results[i] : fastest;
+			average += test_results[i].MBps;
+		}
+		$("#stat_slowest span").text(Math.round(slowest.MBps*100)/100 + "Mbps ("+slowest.TargetSize/1024/1024+"MB)");
+		$("#stat_fastest span").text(Math.round(fastest.MBps*100)/100 + "Mbps ("+fastest.TargetSize/1024/1024+"MB)")
+		$("#stat_average span").text(Math.round((average/test_results.length)*100)/100);
+	}
 	
 	if(target_size > 50 || (last_test != null && last_test.Diff > 30000)) {
 		//end of all things;
-		//$('#result').append("<p>End</p>");
 		var ttime = ((new Date()).getTime() -test_start.getTime());
-		$("#current").html("Finished tests in " + ttime + "ms/"+ ttime/1000 + "s");
+		$("#current").html("");
+		$("#result").append("<p>Finished tests in "+ ttime/1000 + "s</p>");
 		
 		test_start = null;
-		test_results = null;
+		test_results = [];
 		return;
 	}
+	
 	
 	if(test_start == null) {
 		test_start = new Date();
 	}
 	
 	$("#current").html("Running "+target_size +"MB test <span id=\"currentper\"></span>");
-	
+	var r = {}; //results
 	var start = new Date();
-	/*$.get('/download?size=' + target_size, function() {
-		var end = new Date();
-		var r = {"Start": start, "End": end, "Diff": end.getTime() - start.getTime()};
-		var MBps = ((target_size*512*1024)/(r.Diff*1000));
-		$('#result').append("<p>"+target_size +"MB in "+r.Diff+"ms @ "+MBps.toString().substring(0,5)+"MBps or "+(MBps*8).toString().substring(0,5)+"Mbps</p>");
-		runtests(Math.ceil(target_size*1.5), r);
-	});*/
-	var xreq = $.ajax('./download?size=' + target_size, {
+	xreq = $.ajax('./download?size=' + target_size, {
 		progress: function(e) {
-			//console.log((e.loaded/e.total)*100);
-			$("#currentper").html(Math.ceil((e.loaded/e.total)*100).toString() + "% ");
+			var curspeed =  (e.loaded/(((new Date()).getTime() - start.getTime())))/1000
+			r.ActualSize = e.total;
+			r.Loaded = e.loaded;
+			$("#currentper").html(Math.ceil((e.loaded/e.total)*100).toString() + "% @ "+Math.round(curspeed*8*100)/100+"Mbps ("+Math.round(e.loaded/1024)+"/"+e.total/1024+"KB)");
+			
 		}
-	}).progress(function(a){
-		$("#currentper").html(a)
-		alert(a);
 	}).done(function() {
 		var end = new Date();
-		var r = {"Start": start, "End": end, "Diff": end.getTime() - start.getTime()};
-		var MBps = ((target_size*1024*1024)/(r.Diff*1000));
-		$('#result').append("<p>"+target_size +"MB in "+r.Diff+"ms @ "+MBps.toString().substring(0,5)+"MBps or "+(MBps*8).toString().substring(0,5)+"Mbps</p>");
+		//r = {"Start": start, "End": end, "Diff": end.getTime() - start.getTime()};
+		r.Start = start;
+		r.End = end;
+		r.Diff = end.getTime() - start.getTime();
+		var MBps = ((target_size*1024*1024)/(r.Diff))/1000;
+		r.MBps = MBps;
+		r.TargetSize = target_size*1024*1024;
+		test_results.push(r);
+		
+		$('#result').append("<p>"+target_size +"MB in "+Math.round(r.Diff*100)/100+"s @ "+Math.round(MBps*8*100)/100+"Mbps ("+MBps.toString().substring(0,5)+"MBps)</p>");
 		runtests(Math.ceil(target_size*1.5), r);
 	}).always(function() {
 		clearInterval(test_interval);
@@ -72,11 +92,21 @@ function testspeed(size, cb) {
 </script>
 </head>
 <body>
+	<div>Your IP: <span id="remoteip"></span></div>
 	<button onclick="runtests(1, null)">Run</button>
+	<button onclick="stoptests()">Stop</button>
 	<button onclick="clearresults(1)">Clear results</button>
 	<div id="current" ></div>
 	<!--<div id="currentper" ></div>-->
-	<div id="result"></div>
+	<div style="margin:0px auto;">
+		<div id="result" style="float:left; width: 500px; min-height: 100px; border-right: 1px solid black;"><p></p></div>
+		<div id="stats" style="float:left; text-align:left;">
+			<div id="stat_slowest">Slowest: <span></span></div>
+			<div id="stat_fastest">Fastest: <span></span></div>
+			<div id="stat_average">Average: <span></span></div>
+		</div>
+		<div style="clear:both;"> </div>
+	</div>
 	<div><a href="https://github.com/snoj/speedtest">github</a></div>
 </body>
 </html>
