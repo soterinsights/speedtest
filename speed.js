@@ -106,12 +106,13 @@ httpd = http.createServer(function(req, res) {
 					res.statusCode = 400;
 				});
 				res.writeHead(200, {
-					"Content-type": (file_types[tfile.substring(tfile.lastIndexOf(".")+1)] != null)?file_types[tfile.substring(tfile.lastIndexOf(".")+1)]:"text/plain"
+					//"Content-type": (file_types[tfile.substring(tfile.lastIndexOf(".")+1)] != null)?file_types[tfile.substring(tfile.lastIndexOf(".")+1)]:"text/plain"
+					"Content-type": file_types[tfile.substring(tfile.lastIndexOf(".")+1)] || "text/plain"
 				});
 				s.pipe(res);
 				break;
 			case 6:
-				res.end(req.connection.remoteAddress);
+				res.end(req.headers["x-real-ip"]||req.headers["x-forwarded-for"]||req.headers["HTTP_X_FORWARDED_FOR"]||req.connection.remoteAddress);
 				break;
 			case 7:
 				res.end(JSON.stringify(opts.limits));
