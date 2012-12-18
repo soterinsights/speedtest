@@ -10,12 +10,12 @@ var test_start = null;
 var test_down_results = [];
 var test_up_results = [];
 var test_interval = null;
+var test_fail = false;
 var xreq;
 $(document).ready(function() {
 	$.get("./ip", function(res) {
 		$("#remoteip").text(res)
 	});
-	$.get("");
 });
 function clearresults() {
 	$("#result").html("");
@@ -39,7 +39,7 @@ function rundowntests(target_size, last_test, runupload) {
 		$("#stat_download_average span").text(Math.round((average/test_down_results.length)*8*100)/100 + "Mbps");
 	}
 	
-	if(target_size > $("#maxDownloadSize").val() || (last_test != null && last_test.Diff > $("#maxDownloadTime").val()* 1000)) {
+	if(test_fail == true || target_size > $("#maxDownloadSize").val() || (last_test != null && last_test.Diff > $("#maxDownloadTime").val()* 1000)) {
 		//end of all things;
 		var ttime = ((new Date()).getTime() -test_start.getTime());
 		$("#current").html("");
@@ -47,6 +47,7 @@ function rundowntests(target_size, last_test, runupload) {
 		
 		test_start = null;
 		test_down_results = [];
+		test_fail = false;
 		if(runupload) {
 			runuptests($('#uploadStartSize').val(), null);
 		}
@@ -69,6 +70,8 @@ function rundowntests(target_size, last_test, runupload) {
 			$("#currentper").html(Math.ceil((e.loaded/e.total)*100).toString() + "% @ "+Math.round(curspeed*8*100)/100+"Mbps ("+Math.round(e.loaded/1024)+"/"+e.total/1024+"KB)");
 			
 		}
+	}).error(function() {
+		test_fail = true;
 	}).done(function() {
 		var end = new Date();
 		//r = {"Start": start, "End": end, "Diff": end.getTime() - start.getTime()};
@@ -96,11 +99,12 @@ function runuptests(target_size, last_test) {
 		test_start = new Date();
 	}
 	
-	if(test_up_results.length >= $("#maxUploadInterations").val() || target_size > $("#maxUploadSize").val() || (last_test != null && last_test.Diff != null && last_test.Diff > $("#maxUploadTime").val()*1000)) {
+	if(test_fail == true || test_up_results.length >= $("#maxUploadInterations").val() || target_size > $("#maxUploadSize").val() || (last_test != null && last_test.Diff != null && last_test.Diff > $("#maxUploadTime").val()*1000)) {
 		var ttime = ((new Date()).getTime() -test_start.getTime());
 		$("#current").html("");
 		$("#result").append("<p>Finished upload tests in "+ ttime/1000 + "s</p>");
 		test_up_results = [];
+		test_fail = false;
 		return;
 	}
 	
@@ -148,6 +152,8 @@ function runuptests(target_size, last_test) {
 						$("#currentper").html(Math.ceil((e.loaded/e.total)*100).toString() + "% @ "+Math.round(curspeed*8*100)/100+"Mbps ("+Math.round(e.loaded/1024)+"/"+e.total/1024+"KB)");
 					}
 					,data: upload_data.join("")
+				}).error(function() {
+					test_fail = true;
 				}).done(function() {
 					var end = new Date();
 					//r = {"Start": start, "End": end, "Diff": end.getTime() - start.getTime()};
