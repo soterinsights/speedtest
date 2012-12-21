@@ -122,6 +122,9 @@ function runuptests(target_size, last_test) {
         $("#stat_upload_average span").text(Math.round((average/test_up_results.length)*8*100)/100 + "Mbps");
     }
     
+    if(upload_data.length > target_size*1024*1024) {
+        upload_data = upload_data.slice(0, target_size*1024*1024);
+    }
     for(var i = 0; upload_data.length < target_size*1024*1024; i++) {
         upload_data.push(0);
     }
@@ -186,7 +189,7 @@ function runuptests(target_size, last_test) {
         <input type="text" id="downloadStartSize" value="1"/>
         <input type="text" id="downloadSizeModifier" value="1.5"/>
         <input type="text" id="uploadStartSize" value="2"/>
-        <input type="text" id="uploadSizeModifier" value="1"/>
+        <input type="text" id="uploadSizeModifier" value="1.5"/>
         <input type="text" id="maxDownloadSize" value="50"/>
         <input type="text" id="maxUploadSize" value="20"/>
         <input type="text" id="maxDownloadTime" value="30"/>

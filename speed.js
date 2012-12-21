@@ -27,20 +27,21 @@ var file_types = {
 httpd = http.createServer(function(req, res) {
     var datachunks = "";
     var uploadsize = 0;
-    req.on("data", function(d) {
-        switch(opts.url.indexOf(url.parse(req.url.replace("//","/")).pathname)) {
+    switch(opts.url.indexOf(url.parse(req.url.replace("//","/")).pathname)) {
             case 2: //upload
                 //datachunks += d;
                 
-                uploadsize += d.length;
-                if(uploadsize > opts.limits.maxUploadSize * 1024*1024) {
-                    //console.log("upload too big: " + uploadsize);
-                    req.connection.destroy();
-                }
-                //console.log("dsize: " + uploadsize);
+                req.on("data", function(d) {
+                    uploadsize += d.length;
+                    if(uploadsize > opts.limits.maxUploadSize * 1024*1024) {
+                        //console.log("upload too big: " + uploadsize);
+                        req.connection.destroy();
+                    }
+                    //console.log("dsize: " + uploadsize);
+                });
                 break;
         }
-    });
+    
     //http://thecodinghumanist.com/blog/archives/2011/5/6/serving-static-files-from-node-js
     req.on('end', function() {
         switch(opts.url.indexOf(url.parse(req.url.replace("//","/")).pathname)) {
