@@ -6,13 +6,12 @@ var fs = require("fs");
 var opts = {
     "url": ["/","/download","/upload","/jquery.js","/speed.html","/jquery.ajax-progress.js","/ip","/conf"]
     ,limits: {
-        downloadStartSize: 1
-        ,uploadStartSize: 1
-        ,maxUploadSize: 20
-        ,downloadSizeModifier: 1.5
+        downloadStartSize: 128*1024
+        ,uploadStartSize: 1*1024*1024
+        ,downloadSizeModifier: 2
         ,uploadSizeModifier: 1
-        ,maxDownloadSize: 50
-        ,maxUploadSize: 20
+        ,maxDownloadSize: 50*1024*1024
+        ,maxUploadSize: 20*1024*1024
         ,maxDownloadTime: 30
         ,maxUploadTime: 20
         //,maxDownloadInterations: -1
@@ -29,15 +28,13 @@ httpd = http.createServer(function(req, res) {
     var uploadsize = 0;
     switch(opts.url.indexOf(url.parse(req.url.replace("//","/")).pathname)) {
             case 2: //upload
-                //datachunks += d;
-                
+            
                 req.on("data", function(d) {
                     uploadsize += d.length;
-                    if(uploadsize > opts.limits.maxUploadSize * 1024*1024) {
-                        //console.log("upload too big: " + uploadsize);
+                    if(uploadsize > opts.limits.maxUploadSize) {
+                        //Kill it! Kill it with fire!
                         req.connection.destroy();
                     }
-                    //console.log("dsize: " + uploadsize);
                 });
                 break;
         }
@@ -45,33 +42,23 @@ httpd = http.createServer(function(req, res) {
     //http://thecodinghumanist.com/blog/archives/2011/5/6/serving-static-files-from-node-js
     req.on('end', function() {
         switch(opts.url.indexOf(url.parse(req.url.replace("//","/")).pathname)) {
-            /*case 0:
-                res.writeHead(301, {'Location': "./speed.html"});
-                res.end();
-                break;*/
             case 1: //download
                 var max = url.parse(req.url,true).query.size;
-                //if(typeof(max) == 'undefined') { max = 1; }
-                if(typeof(max) == 'undefined' || max > opts.limits.maxDownloadSize) {
+                if(typeof(max) == 'undefined' || max > opts.limits.maxDownloadSize || max % 1 != 0) {
                     res.writeHead(500);
                     res.end("It's too big or NaN!");
                     break;
                 }
-                res.writeHead(200, {'Content-length': (1024*1024*max)});
-                //res.write("download..prepare for X MB!\r\n");
+                
+                res.writeHead(200, {'Content-length': max});
                 var b = new Buffer(1024);
                 b.fill(0x0);
-                //console.log(max);
-                for(var i = 0; i < 1024*max; i++) {
-                    res.write(b);
+                for(var i = 0; i < max; i += 1024) {
+                    res.write((max - i >= 1024)?b:b.slice(0,max%1024));
                 }
                 res.end();
                 break;
             case 2:
-                var max = url.parse(req.url,true).query.size;
-                //console.log("upload target size: " + max);
-                //console.log("upload actual size: " + uploadsize);
-                //res.write("upload..prepared for X MB!\r\n");
                 res.end();
                 break;
             case 0:
@@ -84,13 +71,11 @@ httpd = http.createServer(function(req, res) {
                 if(tfile.replace("//","/") == "/") {
                     tfile = "/speed.html";
                 }
-                
                 try {
                     stats = fs.lstatSync("."+tfile); // throws if path doesn't exist
                 } catch (e) {
                     console.log(e);
                     res.writeHead(404, {'Content-Type': 'text/plain'});
-                    res.write('404 Not Found\n');
                     res.end("404: file not found or more likely, you're trying to go somewhere you can't.");
                     return;
                 }
@@ -107,7 +92,6 @@ httpd = http.createServer(function(req, res) {
                     res.statusCode = 400;
                 });
                 res.writeHead(200, {
-                    //"Content-type": (file_types[tfile.substring(tfile.lastIndexOf(".")+1)] != null)?file_types[tfile.substring(tfile.lastIndexOf(".")+1)]:"text/plain"
                     "Content-type": file_types[tfile.substring(tfile.lastIndexOf(".")+1)] || "text/plain"
                 });
                 s.pipe(res);
@@ -123,11 +107,9 @@ httpd = http.createServer(function(req, res) {
                 break;
             default:
                 res.writeHead(400);
-                //res.statusCode = 400
                 res.write("fail");
                 res.end();
         }
     });
-    //
 });
 httpd.listen(opts.port);
