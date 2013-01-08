@@ -1,23 +1,13 @@
 var http = require('http');
 var url = require("url");
 var fs = require("fs");
-
+var _config = require("./config.json");
 
 var opts = {
-    "url": ["/","/download","/upload","/jquery.js","/speed.html","/jquery.ajax-progress.js","/ip","/conf"]
-    ,limits: {
-        downloadStartSize: 128*1024
-        ,uploadStartSize: 1*1024*1024
-        ,downloadSizeModifier: 2
-        ,uploadSizeModifier: 1
-        ,maxDownloadSize: 50*1024*1024
-        ,maxUploadSize: 20*1024*1024
-        ,maxDownloadTime: 30
-        ,maxUploadTime: 20
-        //,maxDownloadInterations: -1
-        ,maxUploadInterations: 5
-    }
-    ,"port": 8080
+    "url": ["/","/download","/upload","/jquery.js","/speed.html","/jquery.ajax-progress.js","/ip","/conf","/speed.js"]
+    ,"limits": _config.limits
+    ,"port": _config.port || 8080
+    ,"ip": _config.ip || "0.0.0.0"
 };
 var file_types = {
     js: "application/javascript"
@@ -43,10 +33,10 @@ httpd = http.createServer(function(req, res) {
     req.on('end', function() {
         switch(opts.url.indexOf(url.parse(req.url.replace("//","/")).pathname)) {
             case 1: //download
-                var max = url.parse(req.url,true).query.size;
+                var max = parseInt(url.parse(req.url,true).query.size);
                 if(typeof(max) == 'undefined' || max > opts.limits.maxDownloadSize || max % 1 != 0) {
                     res.writeHead(500);
-                    res.end("It's too big or NaN!");
+                    res.end("The number "+ (typeof(max) == 'undefined' || max > opts.limits.maxDownloadSize || max % 1 != 0) +", it's too big or NaN!");
                     break;
                 }
                 
@@ -65,6 +55,7 @@ httpd = http.createServer(function(req, res) {
             case 3:
             case 4:
             case 5:
+            case 8:
                 var tfile = url.parse(req.url).pathname;
                 
                 //fix for reverse proxy when not using / (that is http://host/somepath/speed.html)
@@ -72,14 +63,14 @@ httpd = http.createServer(function(req, res) {
                     tfile = "/speed.html";
                 }
                 try {
-                    stats = fs.lstatSync("."+tfile); // throws if path doesn't exist
+                    stats = fs.lstatSync("./html"+tfile); // throws if path doesn't exist
                 } catch (e) {
                     console.log(e);
                     res.writeHead(404, {'Content-Type': 'text/plain'});
                     res.end("404: file not found or more likely, you're trying to go somewhere you can't.");
                     return;
                 }
-                var s = fs.createReadStream("." + tfile);
+                var s = fs.createReadStream("./html" + tfile);
                 res.on("end", function() { s.destroy(); });
                 s.on('error', function (e) {
                     console.log(req.url);
@@ -112,4 +103,4 @@ httpd = http.createServer(function(req, res) {
         }
     });
 });
-httpd.listen(opts.port);
+httpd.listen(opts.port, opts.ip);

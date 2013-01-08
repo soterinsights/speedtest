@@ -1,33 +1,34 @@
-<html>
-<head>
-<script type="application/javascript" src="./jquery.js" ></script>
-<script type="application/javascript" src="./jquery.ajax-progress.js" ></script>
-<script type="application/javascript">
 
-//var target_size = 1;
 var lock = false;
 var test_start = null;
 var test_down_results = [];
 var test_up_results = [];
+
 var test_interval = null;
 var test_fail = false;
 var xreq;
 $(document).ready(function() {
-    $.get("./ip", function(res) {
-        $("#remoteip").text(res)
-    });
-    
-    $.get("./conf", null, function(conf) {
-        for(var prop in conf) {
-            var pi = $(document.createElement('div'));
-            var ni = $(document.createElement('input')).attr('type', 'text').attr('id', prop).attr('value', conf[prop]);
-            var li = $(document.createElement('label')).text(prop).attr("for", prop);
-            
-            pi.append(li);
-            pi.append(ni);
-            $("#config").append(pi);
-        }
-    }, 'json');
+    try {
+        $.get("./ip", function(res) {
+            $("#remoteip").text(res)
+        });
+        
+        $.get("./conf", null, function(conf) {
+            for(var prop in conf) {
+                var pi = $(document.createElement('div'));
+                var ni = $(document.createElement('input')).attr('type', 'text').attr('id', prop).attr('value', conf[prop]);
+                var li = $(document.createElement('label')).text(prop).attr("for", prop);
+                
+                pi.append(li);
+                pi.append(ni);
+                $("#config").append(pi);
+            }
+        }, 'json');
+        $("#jswarning").toggle();
+        $("#mainbod").toggle();
+    } catch(e) {
+        
+    }
 });
 function clearresults() {
     $("#result").html("");
@@ -50,10 +51,11 @@ function rundowntests(target_size, last_test, runupload) {
         $("#stat_download_slowest span").text((slowest.MBps*8).toFixed(2) + "Mbps ("+(slowest.TargetSize/1024/1024).toFixed(2)+"MB)");
         $("#stat_download_fastest span").text((fastest.MBps*8).toFixed(2) + "Mbps ("+(fastest.TargetSize/1024/1024).toFixed(2)+"MB)")
         $("#stat_download_average span").text(((average/test_down_results.length)*8).toFixed(2) + "Mbps");
+        $("#uploadStartSize").val(Math.round((fastest.TargetSize/8> $("#maxUploadSize").val())? $("#maxUploadSize").val():fastest.TargetSize/8));
     }
     
     if(test_fail == true || target_size > $("#maxDownloadSize").val() || (last_test != null && last_test.Diff > $("#maxDownloadTime").val()* 1000)) {
-    
+        
         //end of all things;
         var ttime = ((new Date()).getTime() -test_start.getTime());
         $("#current").html("");
@@ -73,7 +75,7 @@ function rundowntests(target_size, last_test, runupload) {
         test_start = new Date();
     }
     
-    $("#current").html("Running "+target_size +"bytes download test <span id=\"currentper\"></span>");
+    $("#current").html("Running "+(target_size/1024/1024).toFixed(2) +"MB download test <span id=\"currentper\"></span>");
     var r = {}; //results
     var start = new Date();
     xreq = $.ajax('./download?size=' + target_size, {
@@ -93,12 +95,12 @@ function rundowntests(target_size, last_test, runupload) {
         r.Start = start;
         r.End = end;
         r.Diff = end.getTime() - start.getTime();
-        var MBps = ((target_size)/(r.Diff))/1000;
+        var MBps = ((target_size)/(r.Diff/1000));
         r.MBps = MBps/1024/1024;
         r.TargetSize = target_size;
         test_down_results.push(r);
         
-        $('#result').append("<p>"+(target_size/1024/1024).toFixed(2) +"MB in "+Math.round(r.Diff*100)/100+"s @ "+(MBps*8).toFixed(2)+"Mbps ("+MBps.toString().substring(0,5)+"MBps)</p>");
+        $('#result').append("<p>"+(target_size/1024/1024).toFixed(2) +"MB in "+r.Diff+"s @ "+(r.MBps*8).toFixed(2)+"Mbps ("+r.MBps.toFixed(2)+"MBps)</p>");
         rundowntests(Math.ceil(target_size*$('#downloadSizeModifier').val()), r, runupload);
     }).always(function() {
         clearInterval(test_interval);
@@ -114,7 +116,7 @@ function runuptests(target_size, last_test) {
         test_start = new Date();
     }
     
-    if(test_fail == true || test_up_results.length >= $("#maxUploadInterations").val() || target_size > $("#maxUploadSize").val() || (last_test != null && last_test.Diff != null && last_test.Diff > $("#maxUploadTime").val()*1000)) {
+    if(test_fail == true || test_up_results.length >= parseInt($("#maxUploadInterations").val()) || target_size > parseInt($("#maxUploadSize").val()) || (last_test != null && last_test.Diff != null && last_test.Diff > parseInt($("#maxUploadTime").val())*1000)) {
         var ttime = ((new Date()).getTime() -test_start.getTime());
         $("#current").html("");
         $("#result").append("<p>Finished upload tests in "+ ttime/1000 + "s</p>");
@@ -145,7 +147,6 @@ function runuptests(target_size, last_test) {
     }
     if(createdataInterval == null) {
          createdataInterval = setInterval(function() {
-            //$("#current").text(upload_data.length + (new Date()));
             if(upload_data.length >= target_size) {
                 clearInterval(createdataInterval);
                 createdataInterval = null;
@@ -157,13 +158,8 @@ function runuptests(target_size, last_test) {
                     type: "post"
                     ,processData: false
                     ,contentType: "image/png"
-                    ,headers: {
-                        //"Content-length": target_size*1024*1024
-                    }
+                    ,headers: {}
                     ,progress: function(e) {
-                        //this isn't called?
-                        //$("#current").text(e.loaded);
-                        //console.log(e);
                         var curspeed =  (e.loaded/(((new Date()).getTime() - start.getTime())))/1000
                         r.ActualSize = e.total;
                         r.Loaded = e.loaded;
@@ -174,7 +170,6 @@ function runuptests(target_size, last_test) {
                     test_fail = true;
                 }).done(function() {
                     var end = new Date();
-                    //r = {"Start": start, "End": end, "Diff": end.getTime() - start.getTime()};
                     r.Start = start;
                     r.End = end;
                     r.Diff = end.getTime() - start.getTime();
@@ -182,7 +177,6 @@ function runuptests(target_size, last_test) {
                     r.MBps = MBps;
                     r.TargetSize = target_size;
                     test_up_results.push(r);
-                    //$("#current").text("Upload complete");
                     $('#result').append("<p>"+(target_size/1024/1024).toFixed(2) +"MB in "+(r.Diff).toFixed(2)+"s @ "+(MBps*8).toFixed(2)+"Mbps ("+MBps.toString().substring(0,5)+"MBps)</p>");
                 }).always(function() {
                     runuptests(Math.round(target_size*$("#uploadSizeModifier").val()), r);
@@ -194,39 +188,3 @@ function runuptests(target_size, last_test) {
 function togglesettings() {
     $("#config").toggle(500);
 }
-</script>
-</head>
-<body>
-    <div>Your IP: <span id="remoteip"></span></div>
-    <button onclick="rundowntests($('#downloadStartSize').val(), null)">Download</button>
-    <button onclick="runuptests($('#uploadStartSize').val(), null)">Upload</button>
-    <button onclick="rundowntests($('#downloadStartSize').val(), null, true)">Both</button>
-    <button onclick="stoptests()">Stop</button>
-    <button onclick="clearresults()">Clear results</button>
-    <button onclick="togglesettings()">Setting</button>
-    <div id="current" ></div>
-    <!--<div id="currentper" ></div>-->
-    <div style="margin:0px auto;">
-        <div id="result" style="float:left; width: 500px; min-height: 400px; border-right: 1px solid black;"><p></p></div>
-        <div id="stats" style="padding: 0px 10px; float:left; text-align:left;border-right: 1px solid black;">
-            <div id="download">
-                <h3>Download</h3>
-                <div id="stat_download_slowest">Slowest: <span></span></div>
-                <div id="stat_download_fastest">Fastest: <span></span></div>
-                <div id="stat_download_average">Average: <span></span></div>
-            </div>
-            <div  id="upload">
-                <h3>Upload</h3>
-                <div id="stat_upload_slowest">Slowest: <span></span></div>
-                <div id="stat_upload_fastest">Fastest: <span></span></div>
-                <div id="stat_upload_average">Average: <span></span></div>
-            </div>
-        </div>
-        <div style="padding: 0px 10px; display:none; float:left;" id="config">
-            <h3>Settings</h3>
-        </div>
-        <div style="clear:both;"> </div>
-    </div>
-    <div><a href="https://github.com/snoj/speedtest">github</a></div>
-</body>
-</html>
