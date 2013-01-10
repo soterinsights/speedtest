@@ -1,4 +1,5 @@
 
+var progressWidth = 500;
 var lock = false;
 var test_start = null;
 var test_down_results = [];
@@ -18,6 +19,10 @@ $(document).ready(function() {
                 var pi = $(document.createElement('div'));
                 var ni = $(document.createElement('input')).attr('type', 'text').attr('id', prop).attr('value', conf[prop]);
                 var li = $(document.createElement('label')).text(prop).attr("for", prop);
+                
+                ni.blur(function(ob) {
+                    $(ob.target).val(expandshortcodes($(ob.target).val()));
+                });
                 
                 pi.append(li);
                 pi.append(ni);
@@ -76,6 +81,7 @@ function rundowntests(target_size, last_test, runupload) {
     }
     
     $("#current").html("Running "+(target_size/1024/1024).toFixed(2) +"MB download test <span id=\"currentper\"></span>");
+    $("#current").append("<div style='border-left: 0px green; border-right: "+progressWidth+"px transparent; width:0px; height:15px;'></div>");
     var r = {}; //results
     var start = new Date();
     xreq = $.ajax('./download?size=' + target_size, {
@@ -84,7 +90,8 @@ function rundowntests(target_size, last_test, runupload) {
             r.ActualSize = e.total;
             r.Loaded = e.loaded;
             $("#currentper").html(Math.ceil((e.loaded/e.total)*100).toString() + "% @ "+Math.round(curspeed*8*100)/100+"Mbps ("+Math.round(e.loaded/1024)+"/"+e.total/1024+"KB)");
-            
+            $("#current div:first").css('border-left', Math.ceil((e.loaded/e.total)*100*(progressWidth/100)).toString() +"px solid green");
+            $("#current div:first").css('border-right', (progressWidth-Math.ceil((e.loaded/e.total)*100*(progressWidth/100))).toString() +"px solid red");
         }
     }).error(function(e) {
         console.log(e);
@@ -151,7 +158,8 @@ function runuptests(target_size, last_test) {
                 clearInterval(createdataInterval);
                 createdataInterval = null;
                 
-                $("#current").html("Running "+target_size +"MB upload test <span id=\"currentper\"></span>");
+                $("#current").html("Running "+(target_size/1024/1024).toFixed(2) +"MB upload test <span id=\"currentper\"></span>");
+                $("#current").append("<div style='border-left: 0px green; border-right: "+progressWidth+"px transparent; width:0px; height:15px;'></div>");
                 var r = {};
                 var start = new Date();
                 xreq = $.ajax('./upload?size=' + target_size, {
@@ -164,6 +172,8 @@ function runuptests(target_size, last_test) {
                         r.ActualSize = e.total;
                         r.Loaded = e.loaded;
                         $("#currentper").html(Math.ceil((e.loaded/e.total)*100).toString() + "% @ "+Math.round(curspeed*8*100)/100+"Mbps ("+Math.round(e.loaded/1024)+"/"+e.total/1024+"KB)");
+                        $("#current div:first").css('border-left', Math.ceil((e.loaded/e.total)*100*(progressWidth/100)).toString() +"px solid green");
+            $("#current div:first").css('border-right', (progressWidth-Math.ceil((e.loaded/e.total)*100*(progressWidth/100))).toString() +"px solid red");
                     }
                     ,data: upload_data.join("")
                 }).error(function() {
@@ -185,6 +195,34 @@ function runuptests(target_size, last_test) {
         }, 10);
     }
 }
+
 function togglesettings() {
     $("#config").toggle(500);
+}
+
+function expandshortcodes(str) {
+    //replace M K, etc with appropriate bytes
+    //mega
+    var res = 0;
+    try {
+        var meg = str.match(/([0-9\.]+)m/i);
+        res += parseFloat(meg[1])*1024*1024;
+    } catch(e){}
+    
+    //kilo
+    try {
+        var meg = str.match(/([0-9\.]+)k/i);
+        res += parseFloat(meg[1])*1024;
+    } catch(e){}
+    
+    //byte
+    try {
+        var meg = str.match(/([0-9\.]+)b/i);
+        res += parseFloat(meg[1]);
+    } catch(e){}
+    try {
+        var meg = str.match(/([0-9\.]+)$/i);
+        res += parseFloat(meg[1]);
+    } catch(e){}
+    return res;
 }

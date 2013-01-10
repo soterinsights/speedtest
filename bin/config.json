@@ -8,8 +8,8 @@
         ,"uploadSizeModifier": "1"
         ,"maxDownloadSize": "52428800"
         ,"maxUploadSize": "20971520"
-        ,"maxDownloadTime": "30"
-        ,"maxUploadTime": "20"
+        ,"maxDownloadTime": "8"
+        ,"maxUploadTime": "4"
         ,"maxUploadInterations": "5"
     }   
 }
