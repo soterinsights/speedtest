@@ -103,5 +103,7 @@ httpd = http.createServer(function(req, res) {
                 res.end();
         }
     });
+    req.resume();
+    res.resume();
 });
 httpd.listen(opts.port, opts.ip);
