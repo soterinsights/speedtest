@@ -16,31 +16,33 @@ opts.d3 = { margin: {top: 20, right: 20, bottom: 30, left: 50} }
 opts.d3.width = 960 - opts.d3.margin.left - opts.d3.margin.right;
 opts.d3.height = 500 - opts.d3.margin.top - opts.d3.margin.bottom;
 
-var x = d3.scale.linear()
-    .range([0, opts.d3.width]);
-
-var y = d3.scale.linear()
-    .range([opts.d3.height, 0]);
-
-var xAxis = d3.svg.axis()
-    .scale(x)
-    .orient("bottom");
-
-var yAxis = d3.svg.axis()
-    .scale(y)
-    .orient("left");
-
-var area = d3.svg.area()
-    .x(function(d) { return x(d.date); })
-    .y0(opts.d3.height)
-    .y1(function(d) { return y(d.close); });
-
-var svg = d3.select("body").append("svg")
-    .attr("width", opts.d3.width + opts.d3.margin.left + opts.d3.margin.right)
-    .attr("height", opts.d3.height + opts.d3.margin.top + opts.d3.margin.bottom)
-  .append("g")
-    .attr("transform", "translate(" + opts.d3.margin.left + "," + opts.d3.margin.top + ")");
-//end d3
+try {
+    var x = d3.scale.linear()
+        .range([0, opts.d3.width]);
+    
+    var y = d3.scale.linear()
+        .range([opts.d3.height, 0]);
+    
+    var xAxis = d3.svg.axis()
+        .scale(x)
+        .orient("bottom");
+    
+    var yAxis = d3.svg.axis()
+        .scale(y)
+        .orient("left");
+    
+    var area = d3.svg.area()
+        .x(function(d) { return x(d.date); })
+        .y0(opts.d3.height)
+        .y1(function(d) { return y(d.close); });
+    
+    var svg = d3.select("body").append("svg")
+        .attr("width", opts.d3.width + opts.d3.margin.left + opts.d3.margin.right)
+        .attr("height", opts.d3.height + opts.d3.margin.top + opts.d3.margin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + opts.d3.margin.left + "," + opts.d3.margin.top + ")");
+    //end d3
+} catch(e) {}
 
 $(document).ready(function() {
     try {
