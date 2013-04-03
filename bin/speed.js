@@ -9,6 +9,7 @@ var opts = {
     ,"port": _config.port || 8080
     ,"ip": _config.ip || "0.0.0.0"
 };
+
 var file_types = {
     js: "application/javascript"
     ,html: "text/html"
