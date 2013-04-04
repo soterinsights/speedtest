@@ -9,25 +9,31 @@ var opts = {
     ,"port": _config.port || 8080
     ,"ip": _config.ip || "0.0.0.0"
 };
+
 var file_types = {
     js: "application/javascript"
     ,html: "text/html"
 }
-httpd = http.createServer(function(req, res) {
-    var datachunks = "";
+var httpd = http.createServer(function(req, res) {
+    
+    //force close of long lasting requests. Hax?
+    setTimeout((function(){
+        this.res.end();
+    }).bind({res: res}), _config.ultimateTimeout);
+    
     var uploadsize = 0;
     switch(opts.url.indexOf(url.parse(req.url.replace("//","/")).pathname)) {
-            case 2: //upload
-            
-                req.on("data", function(d) {
-                    uploadsize += d.length;
-                    if(uploadsize > opts.limits.maxUploadSize) {
-                        //Kill it! Kill it with fire!
-                        req.connection.destroy();
-                    }
-                });
-                break;
-        }
+        case 2: //upload
+        
+            req.on("data", function(d) {
+                uploadsize += d.length;
+                if(uploadsize > opts.limits.maxUploadSize) {
+                    //Kill it! Kill it with fire!
+                    req.connection.destroy();
+                }
+            });
+            break;
+    }
     
     //http://thecodinghumanist.com/blog/archives/2011/5/6/serving-static-files-from-node-js
     req.on('end', function() {
@@ -63,7 +69,7 @@ httpd = http.createServer(function(req, res) {
                     tfile = "/speed.html";
                 }
                 try {
-                    stats = fs.lstatSync("./html"+tfile); // throws if path doesn't exist
+                    var stats = fs.lstatSync("./html"+tfile); // throws if path doesn't exist
                 } catch (e) {
                     console.log(e);
                     res.writeHead(404, {'Content-Type': 'text/plain'});
@@ -88,7 +94,13 @@ httpd = http.createServer(function(req, res) {
                 s.pipe(res);
                 break;
             case 6:
-                res.end(req.headers["x-real-ip"]||req.headers["x-forwarded-for"]||req.headers["HTTP_X_FORWARDED_FOR"]||req.connection.remoteAddress);
+                //res.end(req.headers["x-real-ip"]||req.headers["x-forwarded-for"]||req.headers["HTTP_X_FORWARDED_FOR"]||req.connection.remoteAddress);
+                var ip_headers = ['x-real-ip', 'x-forwarded-for', 'HTTP_X_FORWARDED_FOR'];
+                var res_ips = {remote_ip: req.connection.remoteAddress};
+                for(var i in ip_headers) {
+                    if(req.headers[ip_headers[i]]) res_ips[ip_headers[i]] = req.headers[ip_headers[i]];
+                }
+                res.end(JSON.stringify(res_ips));
                 break;
             case 7:
                 res.writeHead(200,{
@@ -102,5 +114,6 @@ httpd = http.createServer(function(req, res) {
                 res.end();
         }
     });
+    if(req.resume) req.resume();
 });
 httpd.listen(opts.port, opts.ip);
