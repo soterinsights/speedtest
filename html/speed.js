@@ -108,7 +108,7 @@ function rundowntests(target_size, last_test, runupload) {
         test_down_results.push(r);
         
         $('#result').append("<p>"+(target_size/1024/1024).toFixed(2) +"MB in "+r.Diff+"s @ "+(r.MBps*8).toFixed(2)+"Mbps ("+r.MBps.toFixed(2)+"MBps)</p>");
-        rundowntests(Math.ceil(target_size*$('#downloadSizeModifier').val()), r, runupload);
+        setTimeout(rundowntests.bind({}, Math.ceil(target_size*$('#downloadSizeModifier').val()), r, runupload), $("#restInterval").val());
     }).always(function() {
         clearInterval(test_interval);
         test_interval = null;
@@ -189,7 +189,8 @@ function runuptests(target_size, last_test) {
                     test_up_results.push(r);
                     $('#result').append("<p>"+(target_size/1024/1024).toFixed(2) +"MB in "+(r.Diff).toFixed(2)+"s @ "+(MBps*8).toFixed(2)+"Mbps ("+MBps.toString().substring(0,5)+"MBps)</p>");
                 }).always(function() {
-                    runuptests(Math.round(target_size*$("#uploadSizeModifier").val()), r);
+                    //runuptests(Math.round(target_size*$("#uploadSizeModifier").val()), r);
+                    setTimeout(runuptests.bind({}, Math.ceil(target_size*$('#uploadSizeModifier').val()), r), $("#restInterval").val());
                 });
             }
         }, 10);
