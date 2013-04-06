@@ -51,7 +51,7 @@ function addTestResult(kind, testid, timespan, numbytes, rec) {
             friendlySize: ((numbytes/({"bytes": 1, KB: 1024, MB: 1048576, GB: 1073741824})[fb_pf]).toPrecision(3).toString() + fb_pf)
             ,bytes: numbytes
             ,ms: timespan
-            ,mbps: (numbytes/(timespan/1000))/1048576
+            ,mbps: (((numbytes/(timespan/1000))/1048576)*8).toPrecision(3)
         });
         
         return;
