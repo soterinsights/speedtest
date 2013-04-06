@@ -32,9 +32,25 @@ var ko_obj = new ko_func();
 function addTest(kind) {
     var t = {
         kind: kind
-        ,id: Date.now()
+        ,start: Date.now()
+        ,end: null
+        ,timespan: null
         ,items: ko.observableArray()
+        ,finish: null
+        ,stats: {
+            download: {
+                slowest: null
+                ,fastest: null
+                ,average: null
+            }
+            ,upload: {
+                slowest: null
+                ,fastest: null
+                ,average: null
+            }
+        }
     };
+    t.id = t.start;
     ko_obj.ko_test_results.push(t);
     return t;
 }
@@ -46,19 +62,41 @@ function addTestResult(kind, testid, timespan, numbytes, rec) {
         if(numbytes >= 1024) fb_pf = "KB";
         if(numbytes >= 1048576) fb_pf = "MB";
         if(numbytes >= 1073741824) fb_pf = "GB";
-        
-        ko_obj.ko_test_results()[i].items.unshift({
+        var r = {
             friendlySize: ((numbytes/({"bytes": 1, KB: 1024, MB: 1048576, GB: 1073741824})[fb_pf]).toPrecision(3).toString() + fb_pf)
             ,bytes: numbytes
             ,ms: timespan
             ,mbps: (((numbytes/(timespan/1000))/1048576)*8).toPrecision(3)
-        });
+        };
+        ko_obj.ko_test_results()[i].items.unshift(r);
+        
+        if(ko_obj.ko_test_results()[i].stats[kind].fastest === null)
+            ko_obj.ko_test_results()[i].stats[kind].fastest = r;
+        if(ko_obj.ko_test_results()[i].stats[kind].slowest === null)
+            ko_obj.ko_test_results()[i].stats[kind].slowest = r;
+        
+        if(r.mbps > ko_obj.ko_test_results()[i].stats[kind].fastest.mbps)
+            ko_obj.ko_test_results()[i].stats[kind].fastest = r;
+        if(r.mbps < ko_obj.ko_test_results()[i].stats[kind].slowest.mbps)
+            ko_obj.ko_test_results()[i].stats[kind].slowest = r;
         
         return;
     }
     if(rec === null) {
         addTest(kind)
         addTestResult(kind,testid,timespan,numbytes, 1);
+    }
+}
+
+function setTestFinish(testid) {
+    for(var i = 0; i < ko_obj.ko_test_results().length; i++) {
+        if(ko_obj.ko_test_results()[i].id != testid) { continue; }
+        ko_obj.ko_test_results()[i].end = Date.now();
+        ko_obj.ko_test_results()[i].timespan = ko_obj.ko_test_results()[i].end - ko_obj.ko_test_results()[i].start; 
+        
+        ko_obj.ko_test_results()[i].finish = true;
+        
+        return;
     }
 }
 
