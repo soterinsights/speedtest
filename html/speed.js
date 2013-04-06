@@ -162,7 +162,7 @@ function rundowntests(target_size, last_test, runupload) {
         var ttime = ((new Date()).getTime() -test_start.getTime());
         //$("#current").html("");
         //$("#result").append("<p>Finished download tests in "+ ttime/1000 + "s</p>");
-        
+        setTestFinish(current_test.id);
         test_start = null;
         current_test = null;
         test_down_results = [];
