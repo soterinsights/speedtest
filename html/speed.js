@@ -38,16 +38,16 @@ function addTest(kind) {
         ,items: ko.observableArray()
         ,finish: null
         ,stats: {
-            download: {
+            download: ko.observable({
                 slowest: null
                 ,fastest: null
                 ,average: null
-            }
-            ,upload: {
+            })
+            ,upload: ko.observable({
                 slowest: null
                 ,fastest: null
                 ,average: null
-            }
+            })
         }
     };
     t.id = t.start;
