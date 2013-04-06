@@ -33,13 +33,13 @@ function addTest(kind) {
         ,id: Date.now()
         ,items: ko.observableArray()
     };
-    ko_obj.ko_test_results.unshift(t);
-    return t.id;
+    ko_obj.ko_test_results.push(t);
+    return t;
 }
 
 function addTestResult(kind, testid, timespan, numbytes) {
-    for(var i in ko_obj.ko_test_results) {
-        if(i != testid) { continue; }
+    for(var i = 0; i = ko_obj.ko_test_results.length; i++) {
+        if(ko_obj.ko_test_results[i].id != testid) { continue; }
         var fb_pf = "bytes";
         if(numbytes > 1024) fb_pf = "KB";
         if(numbytes > 1048576) fb_pf = "MB";
@@ -137,6 +137,7 @@ function rundowntests(target_size, last_test, runupload) {
     //$("#current").append("<div style='border-left: 0px green; border-right: "+progressWidth+"px transparent; width:0px; height:15px;'></div>");
     var r = {}; //results
     var start = new Date();
+    
     xreq = $.ajax('./download?size=' + target_size, {
         progress: function(e) {
             var curspeed =  (e.loaded/(((new Date()).getTime() - start.getTime())))/1000
@@ -145,6 +146,7 @@ function rundowntests(target_size, last_test, runupload) {
             //$("#currentper").html(Math.ceil((e.loaded/e.total)*100).toString() + "% @ "+Math.round(curspeed*8*100)/100+"Mbps ("+Math.round(e.loaded/1024)+"/"+e.total/1024+"KB)");
             //$("#current div:first").css('border-left', Math.ceil((e.loaded/e.total)*100*(progressWidth/100)).toString() +"px solid green");
             //$("#current div:first").css('border-right', (progressWidth-Math.ceil((e.loaded/e.total)*100*(progressWidth/100))).toString() +"px solid red");
+            r.id = addTest('download');
         }
     }).error(function(e) {
         console.log(e);
@@ -161,6 +163,9 @@ function rundowntests(target_size, last_test, runupload) {
         test_down_results.push(r);
         
         //$('#result').append("<p>"+(target_size/1024/1024).toFixed(2) +"MB in "+r.Diff+"s @ "+(r.MBps*8).toFixed(2)+"Mbps ("+r.MBps.toFixed(2)+"MBps)</p>");
+        
+        addTestResult('download', r.id.id, r.Diff, target_size);
+        
         setTimeout(rundowntests.bind({}, Math.ceil(target_size*$('#downloadSizeModifier').val()), r, runupload), $("#restInterval").val());
     }).always(function() {
         clearInterval(test_interval);
