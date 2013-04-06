@@ -4,7 +4,7 @@ var fs = require("fs");
 var _config = require("./config.json");
 
 var opts = {
-    "url": ["/","/download","/upload","/jquery.js","/speed.html","/jquery.ajax-progress.js","/ip","/conf","/speed.js","/knockout-min.js"]
+    "url": ["/","/download","/upload","/jquery.js","/speed.html","/jquery.ajax-progress.js","/ip","/conf","/speed.js","/knockout-min.js", "/speed.css"]
     ,"limits": _config.limits
     ,"port": _config.port || 8080
     ,"ip": _config.ip || "0.0.0.0"
@@ -63,6 +63,7 @@ var httpd = http.createServer(function(req, res) {
             case 5:
             case 8:
             case 9:
+            case 10:
                 var tfile = url.parse(req.url).pathname;
                 
                 //fix for reverse proxy when not using / (that is http://host/somepath/speed.html)
