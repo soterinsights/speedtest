@@ -8,7 +8,9 @@ var test_up_results = [];
 var test_interval = null;
 var test_fail = false;
 var xreq;
-var ko_test_results;
+var ko_obj = {
+    ko_test_results: ko.observableArray()
+}
     /*
     [
         {
@@ -25,26 +27,25 @@ var ko_test_results;
         }
     ]
     */
-
 function addTest(kind) {
     var t = {
         kind: kind
         ,id: Date.now()
-        ,items: []
+        ,items: ko.observableArray()
     };
-    ko_test_results.unshift(t);
+    ko_obj.ko_test_results.unshift(t);
     return t.id;
 }
 
 function addTestResult(kind, testid, timespan, numbytes) {
-    for(var i in ko_test_results) {
+    for(var i in ko_obj.ko_test_results) {
         if(i != testid) { continue; }
         var fb_pf = "bytes";
         if(numbytes > 1024) fb_pf = "KB";
         if(numbytes > 1048576) fb_pf = "MB";
         if(numbytes > 1073741824) fb_pf = "GB";
         
-        ko_test_results[i].items.unshift({
+        ko_obj.ko_test_results[i].items.unshift({
             friendlySizeM: ((numbytes/({"bytes": 1, KB: 1024, MB: 1048576, GB: 1073741824})[fb_pf]).toPrecision(3).toString() + fb_pf)
             ,bytes: numbytes
             ,ms: timespan
@@ -80,6 +81,11 @@ $(document).ready(function() {
         $("#mainbod").toggle();
     } catch(e) {
         
+    }
+    try {
+        ko.applyBindings(ko_obj)
+    } catch(e){
+        console.log(e);
     }
 });
 function clearresults() {
