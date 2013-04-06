@@ -29,7 +29,7 @@ var ko_test_results;
 function addTest(kind) {
     var t = {
         kind: kind
-        ,id = Date.now()
+        ,id: Date.now()
         ,items: []
     };
     ko_test_results.unshift(t);
