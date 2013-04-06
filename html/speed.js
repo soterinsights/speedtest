@@ -43,9 +43,9 @@ function addTestResult(kind, testid, timespan, numbytes, rec) {
     for(var i = 0; i < ko_obj.ko_test_results().length; i++) {
         if(ko_obj.ko_test_results()[i].id != testid) { continue; }
         var fb_pf = "bytes";
-        if(numbytes > 1024) fb_pf = "KB";
-        if(numbytes > 1048576) fb_pf = "MB";
-        if(numbytes > 1073741824) fb_pf = "GB";
+        if(numbytes >= 1024) fb_pf = "KB";
+        if(numbytes >= 1048576) fb_pf = "MB";
+        if(numbytes >= 1073741824) fb_pf = "GB";
         
         ko_obj.ko_test_results()[i].items.unshift({
             friendlySize: ((numbytes/({"bytes": 1, KB: 1024, MB: 1048576, GB: 1073741824})[fb_pf]).toPrecision(3).toString() + fb_pf)
