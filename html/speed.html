@@ -22,7 +22,7 @@
         <script type="text/html" id="tpl-test-results">
             <div>
                 <div class="finishedTest">
-                    <p>Test finished in <span data-bind="if: finish, text: timespan"></span>ms.</p>
+                    <p data-bind="if: finish">Test finished in <span data-bind="text: timespan"></span>ms.</p>
                     <div class="download" data-bind="if: stats.download.slowest || stats.download.fastest || stats.download.average">
                         <h3>Download</h3>
                         <div id="stat_download_slowest" data-bind="if: stats.download.slowest">Slowest: <span></span></div>
