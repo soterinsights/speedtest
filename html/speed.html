@@ -19,13 +19,15 @@
         
         <script type="text/html" id="tpl-test-results">
             <div>
-                <ul data-bind="template: { name='test-result-items', foreach: items} "></ul>
+                <ul data-bind="template: { name: 'tpl-test-results-items', foreach: items} "></ul>
             </div>
         </script>
         <script type="text/html" id="tpl-test-results-items">
             <li><span data-bind="text: friendlySize"></span> in <span data-bind="text: ms"></span> @ <span data-bind="text:mbps"></span></li>
         </script>
-        <div id="current" date-bind="template: {name: 'tpl-test-results', foreach: ko_test_results}"></div>
+        
+        <div id="current" data-bind="template: {name: 'tpl-test-results', foreach: ko_test_results}"></div>
+        
         <div style="margin:0px auto;">
             <div id="result" style="float:left; width: 500px; min-height: 400px; border-right: 1px solid black;"><p></p></div>
             <div id="stats" style="padding: 0px 10px; float:left; text-align:left;border-right: 1px solid black;">

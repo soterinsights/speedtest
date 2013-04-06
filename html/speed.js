@@ -4,13 +4,15 @@ var lock = false;
 var test_start = null;
 var test_down_results = [];
 var test_up_results = [];
+var current_test = null;
 
 var test_interval = null;
 var test_fail = false;
 var xreq;
-var ko_obj = {
-    ko_test_results: ko.observableArray()
+var ko_func = function () {
+    this.ko_test_results = ko.observableArray();
 }
+var ko_obj = new ko_func();
     /*
     [
         {
@@ -37,22 +39,26 @@ function addTest(kind) {
     return t;
 }
 
-function addTestResult(kind, testid, timespan, numbytes) {
-    for(var i = 0; i = ko_obj.ko_test_results.length; i++) {
-        if(ko_obj.ko_test_results[i].id != testid) { continue; }
+function addTestResult(kind, testid, timespan, numbytes, rec) {
+    for(var i = 0; i < ko_obj.ko_test_results().length; i++) {
+        if(ko_obj.ko_test_results()[i].id != testid) { continue; }
         var fb_pf = "bytes";
         if(numbytes > 1024) fb_pf = "KB";
         if(numbytes > 1048576) fb_pf = "MB";
         if(numbytes > 1073741824) fb_pf = "GB";
         
-        ko_obj.ko_test_results[i].items.unshift({
-            friendlySizeM: ((numbytes/({"bytes": 1, KB: 1024, MB: 1048576, GB: 1073741824})[fb_pf]).toPrecision(3).toString() + fb_pf)
+        ko_obj.ko_test_results()[i].items.unshift({
+            friendlySize: ((numbytes/({"bytes": 1, KB: 1024, MB: 1048576, GB: 1073741824})[fb_pf]).toPrecision(3).toString() + fb_pf)
             ,bytes: numbytes
             ,ms: timespan
             ,mbps: (numbytes/(timespan/1000))/1048576
         });
         
-        break;
+        return;
+    }
+    if(rec === null) {
+        addTest(kind)
+        addTestResult(kind,testid,timespan,numbytes, 1);
     }
 }
 
@@ -120,6 +126,7 @@ function rundowntests(target_size, last_test, runupload) {
         //$("#result").append("<p>Finished download tests in "+ ttime/1000 + "s</p>");
         
         test_start = null;
+        current_test = null;
         test_down_results = [];
         test_fail = false;
         if(runupload) {
@@ -131,13 +138,13 @@ function rundowntests(target_size, last_test, runupload) {
     
     if(test_start == null) {
         test_start = new Date();
+        current_test = addTest('download');
     }
     
     //$("#current").html("Running "+(target_size/1024/1024).toFixed(2) +"MB download test <span id=\"currentper\"></span>");
     //$("#current").append("<div style='border-left: 0px green; border-right: "+progressWidth+"px transparent; width:0px; height:15px;'></div>");
     var r = {}; //results
     var start = new Date();
-    
     xreq = $.ajax('./download?size=' + target_size, {
         progress: function(e) {
             var curspeed =  (e.loaded/(((new Date()).getTime() - start.getTime())))/1000
@@ -146,7 +153,7 @@ function rundowntests(target_size, last_test, runupload) {
             //$("#currentper").html(Math.ceil((e.loaded/e.total)*100).toString() + "% @ "+Math.round(curspeed*8*100)/100+"Mbps ("+Math.round(e.loaded/1024)+"/"+e.total/1024+"KB)");
             //$("#current div:first").css('border-left', Math.ceil((e.loaded/e.total)*100*(progressWidth/100)).toString() +"px solid green");
             //$("#current div:first").css('border-right', (progressWidth-Math.ceil((e.loaded/e.total)*100*(progressWidth/100))).toString() +"px solid red");
-            r.id = addTest('download');
+            
         }
     }).error(function(e) {
         console.log(e);
@@ -164,7 +171,7 @@ function rundowntests(target_size, last_test, runupload) {
         
         //$('#result').append("<p>"+(target_size/1024/1024).toFixed(2) +"MB in "+r.Diff+"s @ "+(r.MBps*8).toFixed(2)+"Mbps ("+r.MBps.toFixed(2)+"MBps)</p>");
         
-        addTestResult('download', r.id.id, r.Diff, target_size);
+        addTestResult('download', current_test.id, r.Diff, target_size);
         
         setTimeout(rundowntests.bind({}, Math.ceil(target_size*$('#downloadSizeModifier').val()), r, runupload), $("#restInterval").val());
     }).always(function() {
