@@ -95,7 +95,7 @@ $(document).ready(function() {
     }
 });
 function clearresults() {
-    $("#result").html("");
+    ko_obj.ko_test_results.removeAll();
 }
 function stoptests() {
     try {
