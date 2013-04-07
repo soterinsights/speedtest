@@ -38,16 +38,16 @@ function addTest(kind) {
         ,items: ko.observableArray()
         ,finish: null
         ,stats: {
-            download: ko.observable({
-                slowest: null
-                ,fastest: null
-                ,average: null
-            })
-            ,upload: ko.observable({
-                slowest: null
-                ,fastest: null
-                ,average: null
-            })
+            download: {
+                slowest: ko.observable(null)
+                ,fastest: ko.observable(null)
+                ,average: ko.observable(null)
+            }
+            ,upload: {
+                slowest: ko.observable(null)
+                ,fastest: ko.observable(null)
+                ,average: ko.observable(null)
+            }
         }
     };
     t.id = t.start;
@@ -70,15 +70,15 @@ function addTestResult(kind, testid, timespan, numbytes, rec) {
         };
         ko_obj.ko_test_results()[i].items.unshift(r);
         
-        if(ko_obj.ko_test_results()[i].stats[kind].fastest === null)
-            ko_obj.ko_test_results()[i].stats[kind].fastest = r;
-        if(ko_obj.ko_test_results()[i].stats[kind].slowest === null)
-            ko_obj.ko_test_results()[i].stats[kind].slowest = r;
+        if(ko_obj.ko_test_results()[i].stats[kind].fastest() == null)
+            ko_obj.ko_test_results()[i].stats[kind].fastest(r);
+        if(ko_obj.ko_test_results()[i].stats[kind].slowest() == null)
+            ko_obj.ko_test_results()[i].stats[kind].slowest(r);
         
         if(r.mbps > ko_obj.ko_test_results()[i].stats[kind].fastest.mbps)
-            ko_obj.ko_test_results()[i].stats[kind].fastest = r;
+            ko_obj.ko_test_results()[i].stats[kind].fastest(r);
         if(r.mbps < ko_obj.ko_test_results()[i].stats[kind].slowest.mbps)
-            ko_obj.ko_test_results()[i].stats[kind].slowest = r;
+            ko_obj.ko_test_results()[i].stats[kind].slowest(r);
         
         return;
     }
