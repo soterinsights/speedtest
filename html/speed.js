@@ -36,7 +36,7 @@ function addTest(kind) {
         ,end: null
         ,timespan: null
         ,items: ko.observableArray()
-        ,finish: null
+        ,finish: ko.observable(null)
         ,stats: {
             download: {
                 slowest: ko.observable(null)
