@@ -25,15 +25,15 @@
                     <p data-bind="if: finish">Test finished in <span data-bind="text: timespan"></span>ms.</p>
                     <div class="download">
                         <h3>Download</h3>
-                        <div id="stat_download_slowest" data-bind="if: stats.download.slowest">Slowest: <span></span></div>
-                        <div id="stat_download_fastest" data-bind="if: stats.download.fastest">Fastest: <span></span></div>
-                        <div id="stat_download_average" data-bind="if: stats.download.average">Average: <span></span></div>
+                        <div class="stat_download_slowest" data-bind="if: stats.download.slowest">Slowest: <span></span></div>
+                        <div class="stat_download_fastest" data-bind="if: stats.download.fastest">Fastest: <span></span></div>
+                        <div class="stat_download_average" data-bind="if: stats.download.average">Average: <span></span></div>
                     </div>
                     <div class="upload" >
                         <h3>Upload</h3>
-                        <div id="stat_upload_slowest" data-bind="if: stats.upload.slowest">Slowest: <span></span></div>
-                        <div id="stat_upload_fastest" data-bind="if: stats.upload.fastest">Fastest: <span></span></div>
-                        <div id="stat_upload_average" data-bind="if: stats.upload.average">Average: <span></span></div>
+                        <div class="stat_upload_slowest" data-bind="if: stats.upload.slowest">Slowest: <span></span></div>
+                        <div class="stat_upload_fastest" data-bind="if: stats.upload.fastest">Fastest: <span></span></div>
+                        <div class="stat_upload_average" data-bind="if: stats.upload.average">Average: <span></span></div>
                     </div>
                 </div>
                 <ul data-bind="template: { name: 'tpl-test-results-items', foreach: items} "></ul>
