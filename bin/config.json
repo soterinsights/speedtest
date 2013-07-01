@@ -1,15 +1,16 @@
 {
-    "ip": "0.0.0.0"
-    ,"port": "8080"
-    ,"limits": {
-        "downloadStartSize": "131072"
-        ,"uploadStartSize": "2097152"
-        ,"downloadSizeModifier": "2"
-        ,"uploadSizeModifier": "1"
-        ,"maxDownloadSize": "52428800"
-        ,"maxUploadSize": "20971520"
-        ,"maxDownloadTime": "8"
-        ,"maxUploadTime": "4"
-        ,"maxUploadInterations": "5"
-    }   
+  "ip": "0.0.0.0"
+  ,"port": "8080"
+  ,"limits": {
+    "downloadStartSize": "131072"
+    ,"uploadStartSize": "2097152"
+    ,"downloadSizeModifier": "2"
+    ,"uploadSizeModifier": "1"
+    ,"maxDownloadSize": "52428800"
+    ,"maxUploadSize": "20971520"
+    ,"maxDownloadTime": "8"
+    ,"maxUploadTime": "4"
+    ,"maxUploadInterations": "5"
+  }
+  ,"ipheaders": ["x-real-ip","x-forwarded-for","HTTP_X_FORWARDED_FOR"]
 }
