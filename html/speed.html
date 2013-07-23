@@ -1,45 +1,60 @@
+<!DOCTYPE html>
 <html>
 <head>
 <script type="application/javascript" src="./jquery.js" ></script>
 <script type="application/javascript" src="./jquery.ajax-progress.js" ></script>
-<script src="http://d3js.org/d3.v3.js"></script>
-<script type="application/javascript" src="./speed.js"></script>
+<script type="application/javascript" src="./knockout-2.2.1.js" ></script>
+<script type="application/javascript" src="./knockout-2.2.1-mapping-2.0.js" ></script>
+<!--<script src="http://d3js.org/d3.v3.js"></script>-->
+<script type="application/javascript" src="./speed2.js"></script>
 <title>NodeJS HTTP Speedtest: All for WAN and WAN for all</title>
 <link rel="stylesheet" type="text/css" href="main.css" />
 </head>
 <body>
-    <div id="jswarning">You need to use a browser that supports Javascript and AJAX.</div>
-    <div id="mainbod" style="display:none;">
-        <div>Your IP: <span id="remoteip"></span></div>
-        <button onclick="rundowntests(parseInt($('#downloadStartSize').val()), null)">Download</button>
-        <button onclick="runuptests(parseInt($('#uploadStartSize').val()), null)">Upload</button>
-        <button onclick="rundowntests(parseInt($('#downloadStartSize').val()), null, true)">Both</button>
-        <button onclick="stoptests()">Stop</button>
-        <button onclick="clearresults()">Clear results</button>
-        <button onclick="togglesettings()">Setting</button>
-        <div id="current" ></div>
-        <div style="margin:0px auto;">
-            <div id="result" style="float:left; width: 500px; min-height: 400px; border-right: 1px solid black;"><p></p></div>
-            <div id="stats" style="padding: 0px 10px; float:left; text-align:left;border-right: 1px solid black;">
-                <div id="download">
-                    <h3>Download</h3>
-                    <div id="stat_download_slowest">Slowest: <span></span></div>
-                    <div id="stat_download_fastest">Fastest: <span></span></div>
-                    <div id="stat_download_average">Average: <span></span></div>
-                </div>
-                <div  id="upload">
-                    <h3>Upload</h3>
-                    <div id="stat_upload_slowest">Slowest: <span></span></div>
-                    <div id="stat_upload_fastest">Fastest: <span></span></div>
-                    <div id="stat_upload_average">Average: <span></span></div>
-                </div>
-            </div>
-            <div style="padding: 0px 10px; display:none; float:left;" id="config">
-                <h3>Settings</h3>
-            </div>
-            <div style="clear:both;"> </div>
+  <div id="jswarning">You need to use a browser that supports Javascript and AJAX.</div>
+  <div id="mainbod" style="display:none;">
+    <div>Your IP: <span id="remoteip" data-bind="text: ipaddresses"></span></div>
+    <!--<button onclick="rundowntests(parseInt($('#downloadStartSize').val()), null)">Download</button>-->
+    <button id='newDownTest'>Download</button>
+    <button onclick="runuptests(parseInt($('#uploadStartSize').val()), null)">Upload</button>
+    <button onclick="rundowntests(parseInt($('#downloadStartSize').val()), null, true)">Both</button>
+    <button onclick="stoptests()">Stop</button>
+    <button onclick="clearresults()">Clear results</button>
+    <button onclick="togglesettings()">Setting</button>
+    <div id="current" ></div>
+    <div style="margin:0px auto;">
+      <div id="result" style="float:left; width: 500px; min-height: 400px; border-right: 1px solid black;">
+        <script type="text/html" id="test-results-template">
+          <div>number of downloads: <span  data-bind="text: dt._download.results.length"></span></div>
+          <div data-bind="template: {name: 'test-results-download-item-template', foreach: dt._download.results, as: 'dti'}"></div>
+        </script>
+        <script type="text/html" id="test-results-download-item-template">
+          <div>dtid: <span data-bind="text: dti.human"></span></div>
+        </script>
+        <div data-bind="template: {name: 'test-results-template', foreach: runningtest, as: 'dt'}"></div>
+        <div data-bind="template: {name: 'test-results-template', foreach: rantests, as: 'dt'}"></div>
+      </div>
+      <div id="stats" style="padding: 0px 10px; float:left; text-align:left;border-right: 1px solid black;">
+        
+        <div id="download">
+          <h3>Download</h3>
+          <div id="stat_download_slowest">Slowest: <span></span></div>
+          <div id="stat_download_fastest">Fastest: <span></span></div>
+          <div id="stat_download_average">Average: <span></span></div>
         </div>
-        <div><a href="https://github.com/snoj/speedtest">github</a></div>
-    <div>
+        <div  id="upload">
+          <h3>Upload</h3>
+          <div id="stat_upload_slowest">Slowest: <span></span></div>
+          <div id="stat_upload_fastest">Fastest: <span></span></div>
+          <div id="stat_upload_average">Average: <span></span></div>
+        </div>
+      </div>
+      <div style="padding: 0px 10px; display:none; float:left;" id="config">
+        <h3>Settings</h3>
+      </div>
+      <div style="clear:both;"> </div>
+    </div>
+    <div><a href="https://github.com/snoj/speedtest">github</a></div>
+  <div>
 </body>
 </html>
