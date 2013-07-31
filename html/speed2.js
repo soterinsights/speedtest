@@ -4,17 +4,12 @@ $(document).ready(function() {
   
   datab = new (function() {
     this.ipaddresses = ko.observable()
-    //,confops: ko.observableArray();
-    this.runningtest = ko.observableArray();
     this.rantests = ko.observableArray()
   })();
   
     ko.applyBindings(datab);
-  /*setInterval(function() {
-  }, 1000);*/
   
   $.get("./ip", function(res) {
-    //$("#remoteip").text(res)
     var l = [];
     for(var i in res) {
       l.push(res[i]);
@@ -40,16 +35,19 @@ $(document).ready(function() {
     console.log("testing if we should star ta test");
     if(datab.rantests().length == 0 || !datab.rantests()[0]()._download.running) {
       console.log("creating a new test set");
-      
+      $('#smallgraph').empty();
       var ntest = new tests("tst" + Date.now())
       var nko = ko.observable(ntest);
+      var g = new createGraph(ntest._download.speedpoints, $('#smallgraph')[0]);
       datab.rantests.unshift(nko);
       ntest.setKO(nko).testDone(function(err, t){
         //running test
         nko.valueHasMutated();
+        g.redraw(ntest._download.speedpoints);
       }).complete(function(err, t) {
         console.log("test " + ntest + " complete");
         nko.valueHasMutated();
+        
       }).down();
     }
     
@@ -88,12 +86,29 @@ $(document).ready(function() {
       if(this.end == 0) return 0;
       return this.end - this.start;
     }).bind(self));
+
+    self.__defineGetter__("bps", (function() {
+      //if(this.end == 0) return 0;
+      var e = (this.end > 0) ? this.end : Date.now();
+      var t = (this.time > 0) ? this.time : e - this.start;
+      return (this.bytesloaded / (t/1000))*8;
+    }).bind(self));
+    self.__defineGetter__("humanbps", (function() {
+      var bps = this.bps;
+      if(bps == 0) return "0 bps";
+      if(bps > 1073741824) return (parseInt((bps/1073741824)*100)/100).toString() + "Gbps"; //GB
+      if(bps > 1048576) return (parseInt((bps/1048576)*100)/100).toString() + "Mbps"; //MB
+      if(bps > 1024) return (parseInt((bps/1024)*100)/100).toString() + "Kbps"; //KB
+      return bps.toString() + " bps";
+    }).bind(self));
+
     self.__defineGetter__("progress", (function() {
       try {
         return parseInt((this.bytesloaded/this.bytes)*10000)/100;
       } catch(e) {}
       return 0;
     }).bind(self));
+
     self.__defineGetter__("human", (function() {
       if(this.bytes == 0) return "0 bytes";
       if(this.bytes > 1073741824) return (parseInt((this.bytes/1073741824)*100)/100).toString() + "GB"; //GB
@@ -107,16 +122,24 @@ $(document).ready(function() {
     this.id = id;
     this._download = {
       sizes: []
-      ,results: [] //ko.observableArray() //ko.observable();???
+      ,results: []
       ,current: -1
       ,running: false
       ,complete: false
       ,speedpoints: []
     };
-    
-    //console.log("setting up sizes to test");
+    self.__defineGetter__("stats", (function(){
+      var r = {
+        slowest: null
+        ,fastest: null
+        ,average: null
+      };
+      for(var i in this.results) {
+        //if(this.results[i].) {}
+      }
+      return r;
+    }).bind(self));
     for(var i = parseInt($('#downloadStartSize').val()); i < parseInt($('#maxDownloadSize').val()) || self._download.sizes > 15; i *= parseFloat($('#downloadSizeModifier').val())) {
-      //console.log("adding %s bytes to try", i);
       self._download.sizes.push(i);
     }
   };
@@ -147,8 +170,8 @@ $(document).ready(function() {
     $.ajax('./download?size=' + thisrun.bytes, {
       progress: function(e) {
         var curspeed =  (e.loaded/((Date.now() - thisrun.start)))/1000
-        self._download.speedpoints.push(curspeed);
         thisrun.bytesloaded = e.loaded;
+        self._download.speedpoints.push({ts: Date.now(), "speed": thisrun.bps});
         if(self._ko) self._ko.valueHasMutated();
       }
     }).error(function(e) {
