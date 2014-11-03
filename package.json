@@ -14,7 +14,7 @@
     ,"speed test"
   ]
   ,"scripts": {
-    "start": "node ./speed.js",
+    "start": "node ./speed.js"
   }
   ,"repository": {
     "type": "git",
