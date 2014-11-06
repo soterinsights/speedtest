@@ -28,6 +28,11 @@ httpd = http.createServer(function(req, res) {
                 });
                 break;
         }
+        
+    req.on('data', function(chunk) {
+        // Make sure that the data from the request is read so that the "end" can happen
+        // console.log('got %d bytes of data', chunk.length);
+    });
     
     //http://thecodinghumanist.com/blog/archives/2011/5/6/serving-static-files-from-node-js
     req.on('end', function() {
@@ -103,4 +108,5 @@ httpd = http.createServer(function(req, res) {
         }
     });
 });
+console.log("starting a server on port %d using ip %s", opts.port, opts.ip);
 httpd.listen(opts.port, opts.ip);
