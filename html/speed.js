@@ -1,332 +1,128 @@
+var http = require('http');
+var url = require("url");
+var fs = require("fs");
+var _config = require("./config.json");
 
-var progressWidth = 500;
-var lock = false;
-var test_start = null;
-var test_down_results = [];
-var test_up_results = [];
-var current_test = null;
+var opts = {
+    //"url": ["/","/download","/upload","/jquery.js","/speed.html","/jquery.ajax-progress.js","/ip","/conf","/speed.js","/knockout-min.js", "/speed.css"]
+    url: []
+    ,"limits": _config.limits
+    ,"port": _config.port || 8080
+    ,"ip": _config.ip || "0.0.0.0"
+};
 
-var test_interval = null;
-var test_fail = false;
-var xreq;
-var ko_func = function () {
-    this.ko_test_results = ko.observableArray();
-}
-var ko_obj = new ko_func();
-    /*
-    [
-        {
-            kind: upload || download
-            ,id: 39812 
-            ,items: [
-                {
-                    friendlySize: 1.00MB
-                    ,bytes: 1048576
-                    ,ms: 1000
-                    ,mbps: 99.00Mbps
-                }
-            ]
-        }
-    ]
-    */
-function addTest(kind) {
-    var t = {
-        kind: kind
-        ,start: Date.now()
-        ,end: null
-        ,timespan: null
-        ,items: ko.observableArray()
-        ,finish: ko.observable(null)
-        ,stats: {
-            download: {
-                slowest: ko.observable(null)
-                ,fastest: ko.observable(null)
-                ,average: ko.observable(null)
-            }
-            ,upload: {
-                slowest: ko.observable(null)
-                ,fastest: ko.observable(null)
-                ,average: ko.observable(null)
-            }
-        }
-    };
-    t.id = t.start;
-    ko_obj.ko_test_results.push(t);
-    return t;
-}
-
-function addTestResult(kind, testid, timespan, numbytes, rec) {
-    for(var i = 0; i < ko_obj.ko_test_results().length; i++) {
-        if(ko_obj.ko_test_results()[i].id != testid) { continue; }
-        var fb_pf = "bytes";
-        if(numbytes >= 1024) fb_pf = "KB";
-        if(numbytes >= 1048576) fb_pf = "MB";
-        if(numbytes >= 1073741824) fb_pf = "GB";
-        var r = {
-            friendlySize: ((numbytes/({"bytes": 1, KB: 1024, MB: 1048576, GB: 1073741824})[fb_pf]).toPrecision(3).toString() + fb_pf)
-            ,bytes: numbytes
-            ,ms: timespan
-            ,mbps: (((numbytes/(timespan/1000))/1048576)*8).toPrecision(3)
-        };
-        ko_obj.ko_test_results()[i].items.unshift(r);
-        
-        if(ko_obj.ko_test_results()[i].stats[kind].fastest() == null)
-            ko_obj.ko_test_results()[i].stats[kind].fastest(r);
-        if(ko_obj.ko_test_results()[i].stats[kind].slowest() == null)
-            ko_obj.ko_test_results()[i].stats[kind].slowest(r);
-        
-        if(r.mbps > ko_obj.ko_test_results()[i].stats[kind].fastest.mbps)
-            ko_obj.ko_test_results()[i].stats[kind].fastest(r);
-        if(r.mbps < ko_obj.ko_test_results()[i].stats[kind].slowest.mbps)
-            ko_obj.ko_test_results()[i].stats[kind].slowest(r);
-        
+//'/download', '/upload', '/ip', '/conf'
+opts.url.push({target: '/download', cb: function(req, res) {
+    var max = parseInt(url.parse(req.url,true).query.size);
+    if(typeof(max) == 'undefined' || max > opts.limits.maxDownloadSize || max % 1 != 0) {
+        res.writeHead(500);
+        res.end("The number "+ (typeof(max) == 'undefined' || max > opts.limits.maxDownloadSize || max % 1 != 0) +", it's too big or NaN!");
         return;
     }
-    if(rec === null) {
-        addTest(kind)
-        addTestResult(kind,testid,timespan,numbytes, 1);
-    }
-}
 
-function setTestFinish(testid) {
-    for(var i = 0; i < ko_obj.ko_test_results().length; i++) {
-        if(ko_obj.ko_test_results()[i].id != testid) { continue; }
-        ko_obj.ko_test_results()[i].end = Date.now();
-        ko_obj.ko_test_results()[i].timespan = ko_obj.ko_test_results()[i].end - ko_obj.ko_test_results()[i].start; 
-        
-        ko_obj.ko_test_results()[i].finish = true;
-        
-        return;
+    res.writeHead(200, {'Content-length': max});
+    var b = new Buffer(1024);
+    b.fill(0x0);
+    for(var i = 0; i < max; i += 1024) {
+        res.write((max - i >= 1024)?b:b.slice(0,max%1024));
     }
-}
+    res.end();
+}});
 
-$(document).ready(function() {
-    try {
-        $.get("./ip", function(res) {
-            $("#remoteip").text(res)
-        });
-        
-        $.get("./conf", null, function(conf) {
-            for(var prop in conf) {
-                var pi = $(document.createElement('div'));
-                var ni = $(document.createElement('input')).attr('type', 'text').attr('id', prop).attr('value', conf[prop]);
-                var li = $(document.createElement('label')).text(prop).attr("for", prop);
-                
-                ni.blur(function(ob) {
-                    $(ob.target).val(expandshortcodes($(ob.target).val()));
-                });
-                
-                pi.append(li);
-                pi.append(ni);
-                $("#config").append(pi);
-            }
-        }, 'json');
-        $("#jswarning").toggle();
-        $("#mainbod").toggle();
-    } catch(e) {
-        
+opts.url.push({target: '/upload', cb: function(req, res) {
+    res.end();
+}});
+
+opts.url.push({target: '/ip', cb: function(req, res) {
+    //res.end(req.headers["x-real-ip"]||req.headers["x-forwarded-for"]||req.headers["HTTP_X_FORWARDED_FOR"]||req.connection.remoteAddress);
+    var ip_headers = ['x-real-ip', 'x-forwarded-for', 'HTTP_X_FORWARDED_FOR'];
+    var res_ips = {remote_ip: req.connection.remoteAddress};
+    for(var i in ip_headers) {
+        if(req.headers[ip_headers[i]]) res_ips[ip_headers[i]] = req.headers[ip_headers[i]];
     }
-    try {
-        ko.applyBindings(ko_obj)
-    } catch(e){
-        console.log(e);
-    }
-});
-function clearresults() {
-    ko_obj.ko_test_results.removeAll();
-}
-function stoptests() {
-    try {
-        xreq.abort();
-    } catch(e) {}
-}
-function rundowntests(target_size, last_test, runupload) {
-    
-    runupload = runupload || false;
-    if(test_down_results != null && test_down_results.length > 0) {
-        var slowest, fastest, average = null;
-        for(var i = 0; i < test_down_results.length; i++) {
-            slowest = (slowest == null || test_down_results[i].MBps < slowest.MBps) ? test_down_results[i] : slowest;
-            fastest = (fastest == null || test_down_results[i].MBps > fastest.MBps) ? test_down_results[i] : fastest;
-            average += test_down_results[i].MBps;
-        }
-        $("#stat_download_slowest span").text((slowest.MBps*8).toFixed(2) + "Mbps ("+(slowest.TargetSize/1024/1024).toFixed(2)+"MB)");
-        $("#stat_download_fastest span").text((fastest.MBps*8).toFixed(2) + "Mbps ("+(fastest.TargetSize/1024/1024).toFixed(2)+"MB)")
-        $("#stat_download_average span").text(((average/test_down_results.length)*8).toFixed(2) + "Mbps");
-        $("#uploadStartSize").val(Math.round((fastest.TargetSize/8> $("#maxUploadSize").val())? $("#maxUploadSize").val():fastest.TargetSize/8));
-    }
-    
-    if(test_fail == true || target_size > $("#maxDownloadSize").val() || (last_test != null && last_test.Diff > $("#maxDownloadTime").val()* 1000)) {
-        
-        //end of all things;
-        var ttime = ((new Date()).getTime() -test_start.getTime());
-        //$("#current").html("");
-        //$("#result").append("<p>Finished download tests in "+ ttime/1000 + "s</p>");
-        setTestFinish(current_test.id);
-        test_start = null;
-        current_test = null;
-        test_down_results = [];
-        test_fail = false;
-        if(runupload) {
-            runuptests($('#uploadStartSize').val(), null);
-        }
-        return;
-    }
-    
-    
-    if(test_start == null) {
-        test_start = new Date();
-        current_test = addTest('download');
-    }
-    
-    //$("#current").html("Running "+(target_size/1024/1024).toFixed(2) +"MB download test <span id=\"currentper\"></span>");
-    //$("#current").append("<div style='border-left: 0px green; border-right: "+progressWidth+"px transparent; width:0px; height:15px;'></div>");
-    var r = {}; //results
-    var start = new Date();
-    xreq = $.ajax('./download?size=' + target_size, {
-        progress: function(e) {
-            var curspeed =  (e.loaded/(((new Date()).getTime() - start.getTime())))/1000
-            r.ActualSize = e.total;
-            r.Loaded = e.loaded;
-            //$("#currentper").html(Math.ceil((e.loaded/e.total)*100).toString() + "% @ "+Math.round(curspeed*8*100)/100+"Mbps ("+Math.round(e.loaded/1024)+"/"+e.total/1024+"KB)");
-            //$("#current div:first").css('border-left', Math.ceil((e.loaded/e.total)*100*(progressWidth/100)).toString() +"px solid green");
-            //$("#current div:first").css('border-right', (progressWidth-Math.ceil((e.loaded/e.total)*100*(progressWidth/100))).toString() +"px solid red");
-            
-        }
-    }).error(function(e) {
-        console.log(e);
-        test_fail = true;
-    }).done(function() {
-        var end = new Date();
-        
-        r.Start = start;
-        r.End = end;
-        r.Diff = end.getTime() - start.getTime();
-        var MBps = ((target_size)/(r.Diff/1000));
-        r.MBps = MBps/1024/1024;
-        r.TargetSize = target_size;
-        test_down_results.push(r);
-        
-        //$('#result').append("<p>"+(target_size/1024/1024).toFixed(2) +"MB in "+r.Diff+"s @ "+(r.MBps*8).toFixed(2)+"Mbps ("+r.MBps.toFixed(2)+"MBps)</p>");
-        
-        addTestResult('download', current_test.id, r.Diff, target_size);
-        
-        setTimeout(rundowntests.bind({}, Math.ceil(target_size*$('#downloadSizeModifier').val()), r, runupload), $("#restInterval").val());
-    }).always(function() {
-        clearInterval(test_interval);
-        test_interval = null;
+    res.end(JSON.stringify(res_ips));
+}});
+
+opts.url.push({target: '/conf', cb: function(req, res) {
+    res.writeHead(200,{
+        "Content-Type": "application/json"
     });
-}
-var upload_data = [];
-var createdataInterval = null;
-function runuptests(target_size, last_test) {
-    //var d = [];
-    
-    if(test_start == null) {
-        test_start = new Date();
+    res.end(JSON.stringify(opts.limits));
+}});
+
+opts.url.push({target: /^.*/g, cb: function(req, res) {
+    var tfile = url.parse(req.url).pathname.replace(/\/\.\.\//g, "/./");
+    //todo fix for reverse proxy when not using / (that is http://host/somepath/speed.html)
+    if(tfile.replace("//","/") == "/") {
+        tfile = "/speed.html";
     }
-    
-    if(test_fail == true || test_up_results.length >= parseInt($("#maxUploadInterations").val()) || target_size > parseInt($("#maxUploadSize").val()) || (last_test != null && last_test.Diff != null && last_test.Diff > parseInt($("#maxUploadTime").val())*1000)) {
-        var ttime = ((new Date()).getTime() -test_start.getTime());
-        //("#current").html("");
-        //$("#result").append("<p>Finished upload tests in "+ ttime/1000 + "s</p>");
-        test_up_results = [];
-        test_fail = false;
+    try {
+        var stats = fs.lstatSync("./html" + tfile); // throws if path doesn't exist
+    } catch (e) {
+        console.log(e);
+        res.writeHead(404, {'Content-Type': 'text/plain'});
+        res.end("404: file not found or more likely, you're trying to go somewhere you can't.");
         return;
     }
+
+    var s = fs.createReadStream("./html" + tfile);
+    res.on("end", function() { s.destroy(); });
+    s.on('error', function (e) {
+        console.log(req.url);
+        console.log(tfile);
+        console.log(e);
+        res.writeHead(404, {'Content-Type': 'text/plain'});
+        res.end("404: file not found or more likely, you're trying to go somewhere you cannot go.");
+    });
+    s.once('fd', function() {
+        res.statusCode = 400;
+    });
+    res.writeHead(200, {
+        "Content-type": file_types[tfile.substring(tfile.lastIndexOf(".")+1)] || "text/plain"
+    });
+    s.pipe(res);
+}});
+
+var file_types = {
+    js: "application/javascript"
+    ,html: "text/html"
+}
+var httpd = http.createServer(function(req, res) {
     
-    if(test_up_results.length > 0) {
-        var slowest, fastest, average = null;
-        
-        for(var i = 0; i < test_up_results.length; i++) {
-            slowest = (slowest == null || test_up_results[i].MBps < slowest.MBps) ? test_up_results[i] : slowest;
-            fastest = (fastest == null || test_up_results[i].MBps > fastest.MBps) ? test_up_results[i] : fastest;
-            average += test_up_results[i].MBps;
+    //force close of long lasting requests. Hax?
+    setTimeout((function(){
+        this.res.end();
+    }).bind({res: res}), _config.ultimateTimeout);
+    
+    var uploadsize = 0;
+    req.body = new Buffer(0);
+    req.on("data", function(d) {
+        uploadsize += d.length;
+        if(uploadsize > opts.limits.maxUploadSize) {
+            //Kill it! Kill it with fire!
+            req.connection.destroy();
         }
-        
-        //$("#stat_upload_slowest span").text(Math.round(slowest.MBps*8*100)/100 + "Mbps ("+slowest.TargetSize/1024/1024+"MB)");
-        //$("#stat_upload_fastest span").text(Math.round(fastest.MBps*8*100)/100 + "Mbps ("+fastest.TargetSize/1024/1024+"MB)")
-        //$("#stat_upload_average span").text(Math.round((average/test_up_results.length)*8*100)/100 + "Mbps");
-    }
+        req.body = Buffer.concat([req.body, d], (req.body.length + d.length));
+    });
     
-    if(upload_data.length > target_size) {
-        upload_data = upload_data.slice(0, target_size);
+    var route = null
+    var urlpath = url.parse(req.url.replace("//","/")).pathname;
+    opts.url.forEach(function(cv) {
+        if(route)
+            return;
+        else if(typeof cv.target == 'string' && cv.target == urlpath)
+            route = cv;
+        else if(cv.target instanceof RegExp && cv.target.test(urlpath))
+            route = cv;
+    });
+    if(route == null) {
+        route = opts.url[opts.url.length-1];
     }
-    for(var i = 0; upload_data.length < target_size; i++) {
-        upload_data.push(0);
-    }
-    if(createdataInterval == null) {
-         createdataInterval = setInterval(function() {
-            if(upload_data.length >= target_size) {
-                clearInterval(createdataInterval);
-                createdataInterval = null;
-                
-                //$("#current").html("Running "+(target_size/1024/1024).toFixed(2) +"MB upload test <span id=\"currentper\"></span>");
-                //$("#current").append("<div style='border-left: 0px green; border-right: "+progressWidth+"px transparent; width:0px; height:15px;'></div>");
-                var r = {};
-                var start = new Date();
-                xreq = $.ajax('./upload?size=' + target_size, {
-                    type: "post"
-                    ,processData: false
-                    ,contentType: "image/png"
-                    ,headers: {}
-                    ,progress: function(e) {
-                        var curspeed =  (e.loaded/(((new Date()).getTime() - start.getTime())))/1000
-                        r.ActualSize = e.total;
-                        r.Loaded = e.loaded;
-                        //$("#currentper").html(Math.ceil((e.loaded/e.total)*100).toString() + "% @ "+Math.round(curspeed*8*100)/100+"Mbps ("+Math.round(e.loaded/1024)+"/"+e.total/1024+"KB)");
-                        //$("#current div:first").css('border-left', Math.ceil((e.loaded/e.total)*100*(progressWidth/100)).toString() +"px solid green");
-                        //$("#current div:first").css('border-right', (progressWidth-Math.ceil((e.loaded/e.total)*100*(progressWidth/100))).toString() +"px solid red");
-                    }
-                    ,data: upload_data.join("")
-                }).error(function() {
-                    test_fail = true;
-                }).done(function() {
-                    var end = new Date();
-                    r.Start = start;
-                    r.End = end;
-                    r.Diff = end.getTime() - start.getTime();
-                    var MBps = ((target_size)/(r.Diff))/1000;
-                    r.MBps = MBps;
-                    r.TargetSize = target_size;
-                    test_up_results.push(r);
-                    //$('#result').append("<p>"+(target_size/1024/1024).toFixed(2) +"MB in "+(r.Diff).toFixed(2)+"s @ "+(MBps*8).toFixed(2)+"Mbps ("+MBps.toString().substring(0,5)+"MBps)</p>");
-                }).always(function() {
-                    //runuptests(Math.round(target_size*$("#uploadSizeModifier").val()), r);
-                    setTimeout(runuptests.bind({}, Math.ceil(target_size*$('#uploadSizeModifier').val()), r), $("#restInterval").val());
-                });
-            }
-        }, 10);
-    }
-}
-
-function togglesettings() {
-    $("#config").toggle(500);
-}
-
-function expandshortcodes(str) {
-    //replace M K, etc with appropriate bytes
-    //mega
-    var res = 0;
-    try {
-        var meg = str.match(/([0-9\.]+)m/i);
-        res += parseFloat(meg[1])*1024*1024;
-    } catch(e){}
-    
-    //kilo
-    try {
-        var meg = str.match(/([0-9\.]+)k/i);
-        res += parseFloat(meg[1])*1024;
-    } catch(e){}
-    
-    //byte
-    try {
-        var meg = str.match(/([0-9\.]+)b/i);
-        res += parseFloat(meg[1]);
-    } catch(e){}
-    try {
-        var meg = str.match(/([0-9\.]+)$/i);
-        res += parseFloat(meg[1]);
-    } catch(e){}
-    return res;
-}
+    //console.log(route)
+    //http://thecodinghumanist.com/blog/archives/2011/5/6/serving-static-files-from-node-js
+    req.on('end', function() {
+        route.cb.call(this, req, res);
+    });
+    if(req.resume) req.resume();
+});
+httpd.listen(opts.port, opts.ip);

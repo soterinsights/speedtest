@@ -11,7 +11,7 @@
         ,"maxUploadSize": "20971520"
         ,"maxDownloadTime": "8"
         ,"maxUploadTime": "4"
-        ,"maxUploadInterations": "5"
+        ,"maxUploadIterations": "5"
         ,"restInterval": "0"
     }   
 }

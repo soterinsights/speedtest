@@ -2,7 +2,7 @@
   "name": "speedtest"
   ,"author": "Josh Erickson <josh@snoj.us>"
   ,"description": "A simple http speed test for private networks."
-  ,"version": "0.2.0"
+  ,"version": "0.3.0"
   ,"contributors": [ 
     {
       "name": "Josh Erickson",
