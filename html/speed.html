@@ -1,20 +1,16 @@
 <html>
 <head>
 <link rel="stylesheet" type="text/css" href="./speed.css">
-<script type="application/javascript" src="./jquery.js" ></script>
-<script type="application/javascript" src="./jquery.ajax-progress.js" ></script>
-<script type="application/javascript" src="./knockout-min.js"></script>
-<script type="application/javascript" src="./speed.js"></script>
 
 <title>NodeJS HTTP Speedtest: All for WAN and WAN for all</title>
 </head>
 <body>
-    <div id="jswarning">You need to use a browser that supports Javascript and AJAX.</div>
-    <div id="mainbod" style="display:none;">
-        <div>Your IP: <span id="remoteip"></span></div>
-        <button onclick="rundowntests(parseInt($('#downloadStartSize').val()), null)">Download</button>
-        <button onclick="runuptests(parseInt($('#uploadStartSize').val()), null)">Upload</button>
-        <button onclick="rundowntests(parseInt($('#downloadStartSize').val()), null, true)">Both</button>
+    <div id="jswarning" data-bind="visible: !st">You need to use a browser that supports Javascript and AJAX.</div>
+    <div id="mainbod" style="display:none;" data-bind="visible: st">
+        <!--<div>Your IP: <span id="remoteip"></span></div>-->
+        <button data-bind="click: function() { st.downtests($root.conf.downloadStartSize(), Date.now()); }" class="download">Download</button>
+        <button data-bind="click: function() { st.uptests(parseInt($('#uploadStartSize').val()), Date.now()); }">Upload</button>
+        <button data-bind="click: function() { st.downtests($root.conf.downloadStartSize(), Date.now(), {upload: $root.conf.uploadStartSize()}); }">Both</button>
         <button onclick="stoptests()">Stop</button>
         <button onclick="clearresults()">Clear results</button>
         <button onclick="togglesettings()">Setting</button>
@@ -22,34 +18,49 @@
         <script type="text/html" id="tpl-test-results">
             <div>
                 <div class="finishedTest">
-                    <p data-bind="if: finish">Test finished in <span data-bind="text: timespan"></span>ms.</p>
-                    <div class="download">
-                        <h3>Download</h3>
-                        <div class="stat_download_slowest" data-bind="if: stats.download.slowest">Slowest: <span></span></div>
-                        <div class="stat_download_fastest" data-bind="if: stats.download.fastest">Fastest: <span></span></div>
-                        <div class="stat_download_average" data-bind="if: stats.download.average">Average: <span></span></div>
-                    </div>
-                    <div class="upload" >
-                        <h3>Upload</h3>
-                        <div class="stat_upload_slowest" data-bind="if: stats.upload.slowest">Slowest: <span></span></div>
-                        <div class="stat_upload_fastest" data-bind="if: stats.upload.fastest">Fastest: <span></span></div>
-                        <div class="stat_upload_average" data-bind="if: stats.upload.average">Average: <span></span></div>
-                    </div>
+                    <h3 data-bind="">Test finished in <span data-bind="text: runningTime"></span>ms.</h3>
+                    <p>
+                        <div data-bind="text: (new Date(startTime))"></div>
+                        <div data-bind="text: (new Date(endTime))"></div>
+                    </p>
                 </div>
-                <ul data-bind="template: { name: 'tpl-test-results-items', foreach: items} "></ul>
+                <div data-bind="if: down.results.length" class="results-details">
+                    <div class="download">
+                        <h4>down</h4>
+                        <div class="stat_download_slowest" data-bind="visible: down.stats.slow">
+                            Slowest: <span data-bind="text: down.stats.slow.last.friendlySize"></span> at <span data-bind="text: down.stats.slow.last.speed.byterate"></span>
+                        </div>
+                        <div class="stat_download_fastest" data-bind="visible: down.stats.fast">
+                            Fastest: <span data-bind="text: down.stats.fast.last.friendlySize"></span> at <span data-bind="text: down.stats.fast.last.speed.byterate"></span>
+                        </div>
+                    </div>
+                    <ul data-bind="template: { name: 'tpl-test-results-items', foreach: down.results} "></ul>
+                </div>
+                <div data-bind="if: up.results.length" class="results-details">
+                    <div class="upload">
+                        <h4>up</h4>
+                        <div class="stat_upload_slowest" data-bind="visible: up.stats.slow">
+                            Slowest: <span data-bind="text: up.stats.slow.last.friendlySize"></span> at <span data-bind="text: up.stats.slow.last.speed.byterate"></span>
+                        </div>
+                        <div class="stat_upload_fastest" data-bind="visible: up.stats.fast">
+                            Fastest: <span data-bind="text: up.stats.fast.last.friendlySize"></span> at <span data-bind="text: up.stats.fast.last.speed.byterate"></span>
+                        </div>
+                    </div>
+                    <ul data-bind="template: { name: 'tpl-test-results-items', foreach: up.results} "></ul>
+                </div>
             </div>
         </script>
         <script type="text/html" id="tpl-test-results-items">
-            <li><span data-bind="text: friendlySize"></span> in <span data-bind="text: ms"></span>ms (<span data-bind="text:mbps"></span>Mbps)</li>
+            <li><span data-bind="text: last.friendlySize"></span> in <span data-bind="text: last.runningTime"></span>ms (<span data-bind="text: last.speed.byterate"></span>ps)</li>
         </script>
         
-        <div id="current">
+        <div id="currenat" data-bind="if: currenttest">
             
         </div>
         
         <div style="margin:0px auto;">
             <div id="result" style="float:left; width: 500px; min-height: 400px; border-right: 1px solid black;">
-               <div data-bind="template: {name: 'tpl-test-results', foreach: ko_test_results}"></div>
+               <div data-bind="template: {name: 'tpl-test-results', foreach: allresults}"></div>
             </div>
             <div id="stats" style="padding: 0px 10px; float:left; text-align:left;border-right: 1px solid black;">
                 <div id="download">
@@ -72,5 +83,11 @@
         </div>
         <div><a href="https://github.com/snoj/speedtest">github</a></div>
     <div>
+
+    <script type="application/javascript" src="./jquery.js" ></script>
+    <script type="application/javascript" src="./jquery.ajax-progress.js" ></script>
+    <script type="application/javascript" src="./knockout-min.js"></script>
+    <script type="application/javascript" src="./knockout.mapping-latest.js"></script>
+    <script type="application/javascript" src="./speed.js"></script>
 </body>
 </html>

@@ -1,3 +1,7 @@
 #result ul {
   list-style-type:none;  
 }
+
+.results-details {
+  text-indent: 2em;
+}
