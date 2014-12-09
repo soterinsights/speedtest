@@ -161,6 +161,7 @@ var speedtest = (function() {
     }
     ,upload_data: []
     ,createdataInterval: null
+    ,stop: ko.observable(false)
   };
 
   state.currenttest.extend({ notify: 'always'});
@@ -183,12 +184,14 @@ var speedtest = (function() {
     })();
     var _startTime = Date.now();
 
-    if(start > state.conf.maxDownloadSize()) {
+    if(start > state.conf.maxDownloadSize() || state.stop()) {
+      if(state.stop()) state.stop(false);
       if(typeof oncomplete == 'function') self.once(oncomplete);
       if(!opts.upload) { 
         var ro = createresultcollection(opts.instanceResults);
         self.emit('complete', ro);
         state.allresults.unshift(ro);
+        state.currenttest(null);
       }
       else self.uptests(opts.upload, _id, opts, oncomplete);
 
@@ -235,6 +238,8 @@ var speedtest = (function() {
 
         tro.adddp(addi);
         opts.events.emit('progress', p, addi, tro);
+
+        state.currenttest(createresultcollection(JSON.parse(JSON.stringify(opts.instanceResults))));
       }
     }); // end init ajax
 
@@ -273,13 +278,15 @@ var speedtest = (function() {
 
     var _startTime = Date.now();
 
-    if(start > state.conf.maxUploadSize() || opts.uploadIterations >= opts.maxUploadIterations) {
+    if(start > state.conf.maxUploadSize() || opts.uploadIterations >= opts.maxUploadIterations || state.stop()) {
+      if(state.stop()) state.stop(false);
       var ro = createresultcollection(opts.instanceResults);
 
       if(typeof oncomplete == 'function') self.once(oncomplete);
       
       self.emit('complete', ro);
       state.allresults.unshift(ro);
+      state.currenttest(null);
       return;
     }
 
@@ -334,6 +341,7 @@ var speedtest = (function() {
 
           tro.adddp(addi);
           opts.events.emit('progress', p, addi, tro);
+          state.currenttest(createresultcollection(JSON.parse(JSON.stringify(opts.instanceResults))));
         }
         ,data: state.upload_data.join("")
     }).error(function() {
