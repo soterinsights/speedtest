@@ -4,7 +4,6 @@ var fs = require("fs");
 var _config = require("./config.json");
 
 var opts = {
-    //"url": ["/","/download","/upload","/jquery.js","/speed.html","/jquery.ajax-progress.js","/ip","/conf","/speed.js","/knockout-min.js", "/speed.css"]
     url: []
     ,"limits": _config.limits
     ,"port": _config.port || 8080
@@ -34,7 +33,6 @@ opts.url.push({target: '/upload', cb: function(req, res) {
 }});
 
 opts.url.push({target: '/ip', cb: function(req, res) {
-    //res.end(req.headers["x-real-ip"]||req.headers["x-forwarded-for"]||req.headers["HTTP_X_FORWARDED_FOR"]||req.connection.remoteAddress);
     var ip_headers = ['x-real-ip', 'x-forwarded-for', 'HTTP_X_FORWARDED_FOR'];
     var res_ips = {remote_ip: req.connection.remoteAddress};
     for(var i in ip_headers) {
@@ -118,8 +116,6 @@ var httpd = http.createServer(function(req, res) {
     if(route == null) {
         route = opts.url[opts.url.length-1];
     }
-    //console.log(route)
-    //http://thecodinghumanist.com/blog/archives/2011/5/6/serving-static-files-from-node-js
     req.on('end', function() {
         route.cb.call(this, req, res);
     });

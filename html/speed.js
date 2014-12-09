@@ -151,9 +151,6 @@ var createresultcollection = function(results) {
 
 var speedtest = (function() {
   var st = function() {
-    //this.alldownresults = ko.observableArray();
-    //this.allupresults = ko.observableArray();
-    //this.currenttest = ko.observable();
     this.test = {};
   };
   var state = {
@@ -177,8 +174,6 @@ var speedtest = (function() {
     if(_opts && typeof _opts == 'function') oncomplete = _opts;
     if(_opts && typeof _opts == 'object') opts = _opts;
 
-    //if(oncomplete && typeof oncomplete == 'function') this.once('complete', oncomplete);
-
     opts.upload = opts.upload || false;
     opts.restInterval =  opts.restInterval || $("#restInterval").val();
     opts.events = ((opts.events && opts.events.emit) ? opts.events : null) || (function() {
@@ -197,18 +192,12 @@ var speedtest = (function() {
       }
       else self.uptests(opts.upload, _id, opts, oncomplete);
 
-      //state.currenttest({});
       return;
     }
 
     var tro = new testresult([_id, Date.now(), start].join(':'), 'down');
     opts.instanceResults = opts.instanceResults || {};
     opts.instanceResults[tro.id] = tro;
-    
-    /*if(typeof state.currenttest() == 'undefined' || state.currenttest() == null) {
-      console.log("new test")
-      state.currenttest(ko.mapping.fromJS(tro));
-    }*/
 
     var testconn = $.ajax({
       url: './download?size=' + start
@@ -235,8 +224,6 @@ var speedtest = (function() {
           if(addi.speed.Bps < 1024) return addi.speed.Kbps + "b";
           if(addi.speed.Bps >= 1024 && addi.speed.Bps < 1048576) return addi.speed.Kbps + "Kb";
           if(addi.speed.Bps >= 1048576 && addi.speed.Bps < 1073741824) return addi.speed.Mbps + "Mb";
-          //if(addi.speed.Bps >= 1073741824) return addi.speed.Gbps + "Gb";
-          //if(addi.speed.Bps >= 1099511627776) return addi.speed.Tbps + "Tb";
         })();
         addi.speed.byterate = addi.speed.bitrate.toUpperCase();
 
@@ -244,13 +231,10 @@ var speedtest = (function() {
           if(addi.size < 1024) return addi.size + "b";
           if(addi.size >= 1024 && addi.size < 1048576) return (addi.size/1024) + "KB";
           if(addi.size >= 1048576 && addi.size < 1073741824) return (addi.size/1048576) + "MB";
-          //if(addi.speed.Bps >= 1073741824) return addi.speed.Gbps + "Gb";
-          //if(addi.speed.Bps >= 1099511627776) return addi.speed.Tbps + "Tb";
         })();
 
         tro.adddp(addi);
         opts.events.emit('progress', p, addi, tro);
-        //ko.mapping.fromJS({currenttest: tro}, state);
       }
     }); // end init ajax
 
@@ -266,23 +250,18 @@ var speedtest = (function() {
     testconn.always(function() {
       self.emit('testcomplete', tro.error, tro);
       opts.events.emit('testcomplete', tro.error, tro);
-      console.log(tro)
       var newstart = start * state.conf.downloadSizeModifier();
       setTimeout(self.downtests.bind(self, newstart, _id, opts, oncomplete), opts.restInterval);
     });
   };
 
   st.prototype.uptests = function(start, _id, _opts, oncomplete) {
-    console.log(arguments)
     var self = this;
 
     var opts = {};
     if(_opts && typeof _opts == 'function') oncomplete = _opts;
     else if(_opts && typeof _opts == 'object') opts = _opts;
 
-    //if(oncomplete && typeof oncomplete == 'function') this.once('complete', oncomplete);
-
-    //opts.upload = opts.upload || false;
     opts.restInterval =  opts.restInterval || state.conf.restInterval(); //$("#restInterval").val();
     opts.maxUploadIterations = opts.maxUploadIterations || state.conf.maxUploadIterations();
     opts.uploadIterations = opts.uploadIterations || 0;
@@ -291,6 +270,7 @@ var speedtest = (function() {
       node.inherits(tmp, node.EventEmitter);
       return new tmp();
     })();
+
     var _startTime = Date.now();
 
     if(start > state.conf.maxUploadSize() || opts.uploadIterations >= opts.maxUploadIterations) {
@@ -300,14 +280,12 @@ var speedtest = (function() {
       
       self.emit('complete', ro);
       state.allresults.unshift(ro);
-      //state.currenttest({});
       return;
     }
 
     var tro = new testresult([_id, Date.now(), start].join(':'), 'up');
     opts.instanceResults = opts.instanceResults || {};
     opts.instanceResults[tro.id] = tro;
-    //state.currenttest(ko.observable(tro));
     
     //size the upload data correctly.
     if(state.upload_data.length > start) {
@@ -316,19 +294,6 @@ var speedtest = (function() {
     for(var i = 0; state.upload_data.length < start; i++) {
         state.upload_data.push(0);
     }
-    console.log("datalength:", (state.upload_data.length/1048576).toFixed(2), "MB");
-
-    //stops multiple uploads from sizing the data at once.
-    /*if(state.createdataInterval == null) {
-      state.createdataInterval = setInterval(function() {
-        if(state.upload_data.length >= start) {
-          clearInterval(state.createdataInterval);
-          state.createdataInterval = null;
-
-
-        }//end 
-      });
-    }*/
 
     var testconn = $.ajax('./upload?size=' + start, {
         type: "post"
@@ -358,8 +323,6 @@ var speedtest = (function() {
             if(addi.speed.Bps < 1024) return addi.speed.Kbps + "b";
             if(addi.speed.Bps >= 1024 && addi.speed.Bps < 1048576) return addi.speed.Kbps + "Kb";
             if(addi.speed.Bps >= 1048576 && addi.speed.Bps < 1073741824) return addi.speed.Mbps + "Mb";
-            //if(addi.speed.Bps >= 1073741824) return addi.speed.Gbps + "Gb";
-            //if(addi.speed.Bps >= 1099511627776) return addi.speed.Tbps + "Tb";
           })();
           addi.speed.byterate = addi.speed.bitrate.toUpperCase();
 
@@ -367,8 +330,6 @@ var speedtest = (function() {
             if(addi.size < 1024) return addi.size + "b";
             if(addi.size >= 1024 && addi.size < 1048576) return (addi.size/1024) + "KB";
             if(addi.size >= 1048576 && addi.size < 1073741824) return (addi.size/1048576) + "MB";
-            //if(addi.speed.Bps >= 1073741824) return addi.speed.Gbps + "Gb";
-            //if(addi.speed.Bps >= 1099511627776) return addi.speed.Tbps + "Tb";
           })();
 
           tro.adddp(addi);
@@ -376,20 +337,19 @@ var speedtest = (function() {
         }
         ,data: state.upload_data.join("")
     }).error(function() {
-        console.log(arguments);
+      tro.error = "An error occured";
+      self.emit('error', tro);
+      opts.events.emit('error', tro);
     }).done(function() {
       tro.complete = true;
       self.emit('testcomplete', tro.error, tro);
       opts.events.emit('testcomplete', tro.error, tro);
-      console.log(tro)
       var newstart = start * state.conf.uploadSizeModifier();
       opts.uploadIterations++;
       setTimeout(self.uptests.bind(self, newstart, _id, opts, oncomplete), opts.restInterval);
-      //runuptests(Math.round(target_size*$("#uploadSizeModifier").val()), r);
-      //setTimeout(runuptests.bind({}, Math.ceil(target_size*$('#uploadSizeModifier').val()), r), opts.restInterval);
     }).always(function() {
     });
-  };
+  }; //end uptest
 
   var sti = new st();
   state.st = sti;
