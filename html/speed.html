@@ -11,9 +11,9 @@
         <button data-bind="click: function() { st.downtests($root.conf.downloadStartSize(), Date.now()); }" class="download">Download</button>
         <button data-bind="click: function() { st.uptests(parseInt($('#uploadStartSize').val()), Date.now()); }">Upload</button>
         <button data-bind="click: function() { st.downtests($root.conf.downloadStartSize(), Date.now(), {upload: $root.conf.uploadStartSize()}); }">Both</button>
-        <button onclick="stoptests()">Stop</button>
-        <button onclick="clearresults()">Clear results</button>
-        <button onclick="togglesettings()">Setting</button>
+        <!--<button data-bind="click: $root.stop.bind($root.stop, true)">Stop</button>-->
+        <button data-bind="click: $root.allresults.bind($root.allresults, [])">Clear results</button>
+        <!--<button onclick="togglesettings()">Setting</button>-->
         
         <script type="text/html" id="tpl-test-results">
             <div>
@@ -54,15 +54,16 @@
             <li><span data-bind="text: last.friendlySize"></span> in <span data-bind="text: last.runningTime"></span>ms (<span data-bind="text: last.speed.byterate"></span>ps)</li>
         </script>
         
-        <div id="currenat" data-bind="if: currenttest">
-            
+        <div id="current" data-bind="if: currenttest">
+            <div class="progress"></div>
+            <div class="result" data-bind="template: {name: 'tpl-test-results', foreach: [currenttest]}"></div>
         </div>
         
         <div style="margin:0px auto;">
-            <div id="result" style="float:left; width: 500px; min-height: 400px; border-right: 1px solid black;">
+            <div id="result" class="result" style="float:left; width: 500px; min-height: 400px; border-right: 1px solid black;">
                <div data-bind="template: {name: 'tpl-test-results', foreach: allresults}"></div>
             </div>
-            <div id="stats" style="padding: 0px 10px; float:left; text-align:left;border-right: 1px solid black;">
+            <div id="stats" style="padding: 0px 10px; float:left; text-align:left;border-right: 1px solid black; display: none;">
                 <div id="download">
                     <h3>Download</h3>
                     <div id="stat_download_slowest">Slowest: <span></span></div>
