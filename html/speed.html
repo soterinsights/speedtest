@@ -28,10 +28,10 @@
                     <div class="download">
                         <h4>down</h4>
                         <div class="stat_download_slowest" data-bind="visible: down.stats.slow">
-                            Slowest: <span data-bind="text: down.stats.slow.last.friendlySize"></span> at <span data-bind="text: down.stats.slow.last.speed.byterate"></span>
+                            Slowest: <span data-bind="text: down.stats.slow.last.friendlySize"></span> at <span data-bind="text: down.stats.slow.last.speed.bitrate"></span>ps
                         </div>
                         <div class="stat_download_fastest" data-bind="visible: down.stats.fast">
-                            Fastest: <span data-bind="text: down.stats.fast.last.friendlySize"></span> at <span data-bind="text: down.stats.fast.last.speed.byterate"></span>
+                            Fastest: <span data-bind="text: down.stats.fast.last.friendlySize"></span> at <span data-bind="text: down.stats.fast.last.speed.bitrate"></span>ps
                         </div>
                     </div>
                     <ul data-bind="template: { name: 'tpl-test-results-items', foreach: down.results} "></ul>
@@ -40,10 +40,10 @@
                     <div class="upload">
                         <h4>up</h4>
                         <div class="stat_upload_slowest" data-bind="visible: up.stats.slow">
-                            Slowest: <span data-bind="text: up.stats.slow.last.friendlySize"></span> at <span data-bind="text: up.stats.slow.last.speed.byterate"></span>
+                            Slowest: <span data-bind="text: up.stats.slow.last.friendlySize"></span> at <span data-bind="text: up.stats.slow.last.speed.bitrate"></span>ps
                         </div>
                         <div class="stat_upload_fastest" data-bind="visible: up.stats.fast">
-                            Fastest: <span data-bind="text: up.stats.fast.last.friendlySize"></span> at <span data-bind="text: up.stats.fast.last.speed.byterate"></span>
+                            Fastest: <span data-bind="text: up.stats.fast.last.friendlySize"></span> at <span data-bind="text: up.stats.fast.last.speed.bitrate"></span>ps
                         </div>
                     </div>
                     <ul data-bind="template: { name: 'tpl-test-results-items', foreach: up.results} "></ul>
@@ -51,7 +51,7 @@
             </div>
         </script>
         <script type="text/html" id="tpl-test-results-items">
-            <li><span data-bind="text: last.friendlySize"></span> in <span data-bind="text: last.runningTime"></span>ms (<span data-bind="text: last.speed.byterate"></span>ps)</li>
+            <li><span data-bind="text: last.friendlySize"></span> in <span data-bind="text: last.runningTime"></span>ms (<span data-bind="text: last.speed.bitrate"></span>ps)</li>
         </script>
         
         <div id="current" data-bind="if: currenttest">
