@@ -1,4 +1,4 @@
-var node = new function() {};
+var node = new (function() {})();
 node.inherits = function(ctor, superCtor) {
   ctor.super_ = superCtor;
   ctor.prototype = Object.create(superCtor.prototype, {
@@ -293,19 +293,20 @@ var speedtest = (function() {
     var tro = new testresult([_id, Date.now(), start].join(':'), 'up');
     opts.instanceResults = opts.instanceResults || {};
     opts.instanceResults[tro.id] = tro;
-    
-    //size the upload data correctly.
-    if(state.upload_data.length > start) {
-        state.upload_data = state.upload_data.slice(0, start);
+
+    function randomInt (low, high) {
+        return Math.floor(Math.random() * (high - low) + low);
     }
-    for(var i = 0; state.upload_data.length < start; i++) {
-        state.upload_data.push(0);
+    state.upload_data = new ArrayBuffer(start);
+    var view   = new Uint8Array(state.upload_data);
+    for(var i = 0; i < state.upload_data.length; i++) {
+        view[i] = randomInt(0,256);
     }
 
     var testconn = $.ajax('./upload?size=' + start, {
         type: "post"
         ,processData: false
-        ,contentType: "image/png"
+        ,contentType: "application/octet-stream"
         ,headers: {}
         ,progress: function(e) {
           var p = ((e.loaded/e.total) * 100).toFixed(2);
@@ -343,7 +344,7 @@ var speedtest = (function() {
           opts.events.emit('progress', p, addi, tro);
           state.currenttest(createresultcollection(JSON.parse(JSON.stringify(opts.instanceResults))));
         }
-        ,data: state.upload_data.join("")
+        ,data: state.upload_data
     }).error(function() {
       tro.error = "An error occured";
       self.emit('error', tro);

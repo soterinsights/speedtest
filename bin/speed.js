@@ -4,10 +4,10 @@ var fs = require("fs");
 var _config = require("./config.json");
 
 var opts = {
-    url: []
-    ,"limits": _config.limits
-    ,"port": _config.port || 8080
-    ,"ip": _config.ip || "0.0.0.0"
+    url: [],
+    "limits": _config.limits,
+    "port": _config.port || 8080,
+    "ip": _config.ip || "0.0.0.0"
 };
 
 //'/download', '/upload', '/ip', '/conf'
@@ -82,13 +82,14 @@ opts.url.push({target: /^.*/g, cb: function(req, res) {
 }});
 
 var file_types = {
-    js: "application/javascript"
-    ,html: "text/html"
-}
+    js: "application/javascript",
+    html: "text/html"
+};
+
 var httpd = http.createServer(function(req, res) {
     
     //force close of long lasting requests. Hax?
-    setTimeout((function(){
+    var reqtimeout = setTimeout((function(){
         this.res.end();
     }).bind({res: res}), _config.ultimateTimeout);
     
@@ -103,7 +104,7 @@ var httpd = http.createServer(function(req, res) {
         req.body = Buffer.concat([req.body, d], (req.body.length + d.length));
     });
     
-    var route = null
+    var route = null;
     var urlpath = url.parse(req.url.replace("//","/")).pathname;
     opts.url.forEach(function(cv) {
         if(route)
@@ -117,6 +118,7 @@ var httpd = http.createServer(function(req, res) {
         route = opts.url[opts.url.length-1];
     }
     req.on('end', function() {
+        clearTimeout(reqtimeout);
         route.cb.call(this, req, res);
     });
     if(req.resume) req.resume();
