@@ -20,6 +20,7 @@ Credits
 * [Jquery Ajax Progress](https://github.com/englercj/jquery-ajax-progress) by Chad Engler
 * [Knockout](http://knockoutjs.com/)
 * [dev-zero-stream](https://github.com/mafintosh/dev-zero-stream/blob/f61f06911fc60eb57645d502e53d35a3acfa31d4/index.js) by Mathias Buus
+* [orderObjectBy](http://justinklemm.com/angularjs-filter-ordering-objects-ngrepeat/) by Justin Klemm
 
 MIT License
 =========

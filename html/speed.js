@@ -1,57 +1,4 @@
 (function() {
-  var node = new (function() {})();
-  node.inherits = function(ctor, superCtor) {
-    ctor.super_ = superCtor;
-    ctor.prototype = Object.create(superCtor.prototype, {
-      constructor: {
-        value: ctor,
-        enumerable: false,
-        writable: true,
-        configurable: true
-      }
-    });
-  };
-  node.EventEmitter = function() {this._eventemitter = {}};
-  node.EventEmitter.prototype.on = function(eventname, callback, _type) {
-    if(typeof this._eventemitter == 'undefined') this._eventemitter = {};
-    _type = _type || 'on';
-    if(typeof this._eventemitter[eventname] === 'undefined') this._eventemitter[eventname] = {};
-
-    this._eventemitter[eventname][callback.toString()] = {callback: callback, type: _type};
-    return this;
-  };
-
-  node.EventEmitter.prototype.once = function(eventname, callback) {
-    return this.on(eventname, callback, 'once');
-  };
-
-  node.EventEmitter.prototype.emit = function(eventname) {
-    if(typeof this._eventemitter == 'undefined') this._eventemitter = {};
-    var self = this;
-    var _args = [];
-    for(var i = 1; i < arguments.length; i++) {
-      _args.push(arguments[i]);
-    }
-    if(typeof this._eventemitter[eventname] == 'undefined') return this;
-    var keys = Object.keys(this._eventemitter[eventname]);
-
-    keys.filter(function(v) {
-        return self._eventemitter[eventname][v].rm != true;
-      })
-      .forEach(function(v) {
-        var o = self._eventemitter[eventname][v];
-        if(o.type === 'once') v.rm = true;
-
-        o.callback.apply(self, _args);
-      });
-    keys.forEach(function(v) {
-      var o = self._eventemitter[eventname][v];
-      if(o.type == 'once' && o.rm == true)
-        delete self._eventemitter[eventname][v];
-    });
-    return this;
-  };
-
   Promise.create = function(f) {
     return new Promise(f);
   }
@@ -86,6 +33,17 @@
 
   //Promise.series([function(r) {r('u')}, 1,2,3,4]).then(console.log);
 
+  Promise.prototype.branch = function PromisePassthru(calls) {
+    return this.then(function(v) {
+      calls.forEach(function(c) {
+        setTimeout(c.bind(null, v), 0)
+      });
+      return v;
+    })
+  }
+
+  //Promise.resolve(3000).branch([console.log, console.error, function(v) { setTimeout(console.log.bind(null, 'delayed'), v); }]).then(console.log.bind(null, "promise value"));
+
   function assignTo(o, k) {
     return function(v) {
       o[k] = v;
@@ -103,6 +61,22 @@
   tp.then(console.log);
   setTimeout(function() {tp.$resolve(1111); }, 1000);*/
 
+  function arrayFlatten() {
+    'use strict';
+    var args = Array.prototype.slice.call(arguments, 0);
+    return args.reduce(function(ac, c, ci) {
+      var from;
+      if(Array.isArray(c))
+        from = arrayFlatten.apply(null, c);
+      else
+        from = [c];
+
+      return ac.concat(from);
+    }, []);
+  }
+
+  console.log(arrayFlatten([1,2,3,4,[1,2,3,4,5,[8,9,0]]]))
+
   //
   // end pre libs
   //
@@ -110,7 +84,7 @@
   $app.run(function($rootScope) {
     $rootScope.$conf = {};
     var confLoaded = new Promise(function(resolve, reject) {
-      $.get('/conf', resolve).fail(reject);
+      $.get('./conf', resolve).fail(reject);
     });
     confLoaded.then(assignTo($rootScope.$conf, 'limits'));
     $rootScope.$on('uiupdate', $rootScope.$applyAsync.bind($rootScope));
@@ -121,10 +95,23 @@
 
     //window.c = confLoaded;
   });
+  $app.filter('orderObjectBy', function() {
+    return function(items, field, reverse) {
+      var filtered = [];
+      angular.forEach(items, function(item) {
+        filtered.push(item);
+      });
+      filtered.sort(function (a, b) {
+        return (a[field] > b[field] ? 1 : -1);
+      });
+      if(reverse) filtered.reverse();
+      return filtered;
+    };
+  });
 
   $app.factory('$conf', function() {
     return new Promise(function(resolve, reject) {
-      $.get('/conf',function(d) {
+      $.get('./conf',function(d) {
         resolve({limits: d});
       }).fail(reject);
     });
@@ -132,6 +119,8 @@
 
   $app.controller('all', function($rootScope, $scope, $conf) {
     function updateui(r) {
+      try {
+      } catch(e){}
       $rootScope.$applyAsync();
       return r;
     };
@@ -141,47 +130,80 @@
     }
 
     $scope.results = [];
+
+    function flattenResults(o) {
+      var ks = Object.keys(o.all);
+      var l = ks.map(function(k) {
+        delete o.all[k].$$hashKey;
+        return o.all[k];
+      });
+      console.log(l.filter(nullfilter));
+      return l.filter(nullfilter);
+    }
+
     $scope.current = {};
     $rootScope.$on('speedupdate', function(e, r) {
       var k = ({up:"upload", down: "download"})[r.dir];
       $scope.current[k][r.dir + r.size + r.start] = r;
+      $scope.current.all[r.dir + r.size + r.start] = r;
     })
     $scope.$startDownload = function() {
-      $scope.current = {download: {}};
+      if(!!$scope.current.all)
+        return;
+      $scope.current = {download: {}, all:{}};
       $conf.then(function($conf) {
         downloadTestPanel($rootScope, $scope, $conf).then(function(d) {
-          $scope.results.push({download: d.filter(nullfilter)});
+          //$scope.results.push({download: d.filter(nullfilter)});
+          //$scope.results.push($scope.current);
+          $scope.results = $scope.results.concat(flattenResults($scope.current));
           return d;
         }).then(updateui).catch(console.error).then(function() {
-          $scope.current = {}
+          delete $scope.current
+          $scope.current = {};
         });
       })
     };
     $scope.$startUpload = function() {
-      $scope.current = {upload: {}};
+      if(!!$scope.current.all)
+        return;
+      $scope.current = {upload: {}, all: {}};
       return uploadTestPanel($rootScope, $scope).then(function(d) {
-        $scope.results.push({upload: d.filter(nullfilter)});
+        //$scope.results.push({upload: d.filter(nullfilter)});
+        //$scope.results.push($scope.current);
+        $scope.results = $scope.results.concat(flattenResults($scope.current));
         return d;
-      }).then(updateui).catch(console.error).then(function() {
-        $scope.current = {}
-      });
+      }).catch(console.error).then(function() {
+        delete $scope.current
+        $scope.current = {};
+      }).then(updateui);
     };
 
     $scope.$startBoth = function() {
-      $scope.current = {upload:{}, download:{}};
+      if(!!$scope.current.all)
+        return;
+      $scope.current = {upload:{}, download:{}, all: {}};
       var dl = downloadTestPanel($rootScope, $scope);
       dl.catch(console.error);
       dl.then(function(d) {
-        $scope.results.push({download: d.filter(nullfilter)});
         return d;
       }).then(updateui).then(function() {
         return uploadTestPanel($rootScope, $scope).then(function(d) {
-          $scope.results.push({upload: d.filter(nullfilter)});
+          //$scope.results.push({upload: d.filter(nullfilter)});
+          //$scope.results.push($scope.current);
+          $scope.results = $scope.results.concat(flattenResults($scope.current));
           return d;
-        });
-      }).catch(console.error).then(updateui).then(function() {
-        $scope.current = {}
-      });
+        }).then(function() {
+          delete $scope.current
+          $scope.current = {}
+        }).then(updateui);
+      }).catch(console.error);
+    };
+
+    $scope.$clearResults = function() {
+      if(!!$scope.current.all)
+        return;
+      $scope.results = [];
+      updateui();
     };
   })
 
@@ -289,6 +311,8 @@
         results.fsize = new Number(f.replace(/[a-z]/gi, ''));
         results.fsizetype = f.replace(/[0-9\.]/gi, '');
       })(fsize);
+
+      results.id = results.dir + results.size + results.start;
     };
     var results = {
       dir: $dir,
@@ -333,7 +357,10 @@
         calc(results);
         $state.lastRuntime = results.time;
         $rootScope.$emit('speedupdate', results);
-        r(results);
+        if($conf.limits.restInterval > 0)
+          return Promise.setTimeout($conf.limits.restInterval).then(r.bind(null, results));
+        else
+          return r(results);
       }).fail(x);
     };
   }

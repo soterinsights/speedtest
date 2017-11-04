@@ -22,14 +22,7 @@ opts.url.push({target: '/download', cb: function(req, res) {
         return;
     }
     res.writeHead(200, {'Content-length': max});
-    //require('fs').writeFile('./html/' + max + '.bin', Buffer.alloc(max), function() {});
     zerostream(max).pipe(res);
-    return;
-    for(var i = 0; i < max; i += 1000) {
-        console.log('dl', i, max, max - i);
-        res.write((max - i >= 1000)?downloadBuffer:downloadBuffer.slice(0,max%1000));
-    }
-    res.end();
 }});
 
 var watchUpload = function(req, res) {
