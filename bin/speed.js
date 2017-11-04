@@ -1,14 +1,17 @@
 var http = require('http');
 var url = require("url");
 var fs = require("fs");
+var zerostream = require('./zerostream.js');
 var _config = require("./config.json");
 
 var opts = {
     url: [],
     "limits": _config.limits,
-    "port": _config.port || 8080,
-    "ip": _config.ip || "0.0.0.0"
+    "port": process.env.ST_PORT || _config.port || 8080,
+    "ip": process.env.ST_ADDR || _config.ip || "0.0.0.0"
 };
+
+var downloadBuffer = Buffer.alloc(1000);
 
 //'/download', '/upload', '/ip', '/conf'
 opts.url.push({target: '/download', cb: function(req, res) {
@@ -18,18 +21,26 @@ opts.url.push({target: '/download', cb: function(req, res) {
         res.end("The number "+ (typeof(max) == 'undefined' || max > opts.limits.maxDownloadSize || max % 1 != 0) +", it's too big or NaN!");
         return;
     }
-
     res.writeHead(200, {'Content-length': max});
-    var b = new Buffer(1024);
-    b.fill(0x0);
-    for(var i = 0; i < max; i += 1024) {
-        res.write((max - i >= 1024)?b:b.slice(0,max%1024));
+    //require('fs').writeFile('./html/' + max + '.bin', Buffer.alloc(max), function() {});
+    zerostream(max).pipe(res);
+    return;
+    for(var i = 0; i < max; i += 1000) {
+        console.log('dl', i, max, max - i);
+        res.write((max - i >= 1000)?downloadBuffer:downloadBuffer.slice(0,max%1000));
     }
     res.end();
 }});
 
+var watchUpload = function(req, res) {
+  if(req.socket.bytesRead >= opts.limits.maxUploadSize)
+    req.connection.destroy();
+};
+
 opts.url.push({target: '/upload', cb: function(req, res) {
-    res.end();
+    req.on('data', watchUpload.bind(this, req, res));
+    req.on('end', res.end.bind(res, ''));
+    req.resume();
 }});
 
 opts.url.push({target: '/ip', cb: function(req, res) {
@@ -52,7 +63,7 @@ opts.url.push({target: /^.*/g, cb: function(req, res) {
     var tfile = url.parse(req.url).pathname.replace(/\/\.\.\//g, "/./");
     //todo fix for reverse proxy when not using / (that is http://host/somepath/speed.html)
     if(tfile.replace("//","/") == "/") {
-        tfile = "/speed.html";
+        tfile = "/index.html";
     }
     try {
         var stats = fs.lstatSync("./html" + tfile); // throws if path doesn't exist
@@ -83,44 +94,26 @@ opts.url.push({target: /^.*/g, cb: function(req, res) {
 
 var file_types = {
     js: "application/javascript",
-    html: "text/html"
+    html: "text/html",
+    css: "text/css"
 };
 
 var httpd = http.createServer(function(req, res) {
-    
-    //force close of long lasting requests. Hax?
-    var reqtimeout = setTimeout((function(){
-        this.res.end();
-    }).bind({res: res}), _config.ultimateTimeout);
-    
-    var uploadsize = 0;
-    req.body = new Buffer(0);
-    req.on("data", function(d) {
-        uploadsize += d.length;
-        if(uploadsize > opts.limits.maxUploadSize) {
-            //Kill it! Kill it with fire!
-            req.connection.destroy();
-        }
-        req.body = Buffer.concat([req.body, d], (req.body.length + d.length));
-    });
-    
-    var route = null;
-    var urlpath = url.parse(req.url.replace("//","/")).pathname;
-    opts.url.forEach(function(cv) {
-        if(route)
-            return;
-        else if(typeof cv.target == 'string' && cv.target == urlpath)
-            route = cv;
-        else if(cv.target instanceof RegExp && cv.target.test(urlpath))
-            route = cv;
-    });
-    if(route == null) {
-        route = opts.url[opts.url.length-1];
-    }
-    req.on('end', function() {
-        clearTimeout(reqtimeout);
-        route.cb.call(this, req, res);
-    });
-    if(req.resume) req.resume();
+  var route = null;
+  var urlpath = url.parse(req.url.replace("//","/")).pathname;
+  opts.url.forEach(function(cv) {
+      if(route)
+          return;
+      else if(typeof cv.target == 'string' && cv.target == urlpath)
+          route = cv;
+      else if(cv.target instanceof RegExp && cv.target.test(urlpath))
+          route = cv;
+  });
+  if(route == null) {
+      route = opts.url[opts.url.length-1];
+  }
+
+  route.cb.call(this, req, res);
 });
+
 httpd.listen(opts.port, opts.ip);

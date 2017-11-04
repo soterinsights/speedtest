@@ -1,397 +1,340 @@
-var node = new (function() {})();
-node.inherits = function(ctor, superCtor) {
-  ctor.super_ = superCtor;
-  ctor.prototype = Object.create(superCtor.prototype, {
-    constructor: {
-      value: ctor,
-      enumerable: false,
-      writable: true,
-      configurable: true
+(function() {
+  var node = new (function() {})();
+  node.inherits = function(ctor, superCtor) {
+    ctor.super_ = superCtor;
+    ctor.prototype = Object.create(superCtor.prototype, {
+      constructor: {
+        value: ctor,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+  };
+  node.EventEmitter = function() {this._eventemitter = {}};
+  node.EventEmitter.prototype.on = function(eventname, callback, _type) {
+    if(typeof this._eventemitter == 'undefined') this._eventemitter = {};
+    _type = _type || 'on';
+    if(typeof this._eventemitter[eventname] === 'undefined') this._eventemitter[eventname] = {};
+
+    this._eventemitter[eventname][callback.toString()] = {callback: callback, type: _type};
+    return this;
+  };
+
+  node.EventEmitter.prototype.once = function(eventname, callback) {
+    return this.on(eventname, callback, 'once');
+  };
+
+  node.EventEmitter.prototype.emit = function(eventname) {
+    if(typeof this._eventemitter == 'undefined') this._eventemitter = {};
+    var self = this;
+    var _args = [];
+    for(var i = 1; i < arguments.length; i++) {
+      _args.push(arguments[i]);
     }
-  });
-};
-node.EventEmitter = function() {this._eventemitter = {}};
-node.EventEmitter.prototype.on = function(eventname, callback, _type) {
-  if(typeof this._eventemitter == 'undefined') this._eventemitter = {};
-  _type = _type || 'on';
-  if(typeof this._eventemitter[eventname] === 'undefined') this._eventemitter[eventname] = {};
+    if(typeof this._eventemitter[eventname] == 'undefined') return this;
+    var keys = Object.keys(this._eventemitter[eventname]);
 
-  this._eventemitter[eventname][callback.toString()] = {callback: callback, type: _type};
-  return this;
-};
+    keys.filter(function(v) {
+        return self._eventemitter[eventname][v].rm != true;
+      })
+      .forEach(function(v) {
+        var o = self._eventemitter[eventname][v];
+        if(o.type === 'once') v.rm = true;
 
-node.EventEmitter.prototype.once = function(eventname, callback) {
-  return this.on(eventname, callback, 'once');
-};
-
-node.EventEmitter.prototype.emit = function(eventname) {
-  if(typeof this._eventemitter == 'undefined') this._eventemitter = {};
-  var self = this;
-  var _args = [];
-  for(var i = 1; i < arguments.length; i++) {
-    _args.push(arguments[i]);
-  }
-  if(typeof this._eventemitter[eventname] == 'undefined') return this;
-  var keys = Object.keys(this._eventemitter[eventname]);
-
-  keys.filter(function(v) {
-      return self._eventemitter[eventname][v].rm != true;
-    })
-    .forEach(function(v) {
+        o.callback.apply(self, _args);
+      });
+    keys.forEach(function(v) {
       var o = self._eventemitter[eventname][v];
-      if(o.type === 'once') v.rm = true;
-
-      o.callback.apply(self, _args);
+      if(o.type == 'once' && o.rm == true)
+        delete self._eventemitter[eventname][v];
     });
-  keys.forEach(function(v) {
-    var o = self._eventemitter[eventname][v];
-    if(o.type == 'once' && o.rm == true)
-      delete self._eventemitter[eventname][v];
-  });
-  return this;
-};
-
-var testresult = function(_id, _direction) {
-  this.id = _id || Date.now();
-  this.direction = _direction || 'up'
-  this.dp = [];
-  this.last = null;
-  this.first = null;
-  this.complete = false;
-}
-testresult.prototype.adddp = function(_dp) {
-  var dp = JSON.parse(JSON.stringify(_dp));
-  dp._dpadded = Date.now();
-  this.dp.push(dp);
-  this.last = dp;
-
-  if(this.first == null)
-    this.first = dp;
-}
-
-var createresultcollection = function(results) {
-  //opts.instanceResults from completed test instance.
-  
-  var ro = {
-    up: {
-        results: []
-        ,first: null
-        ,last: null
-        ,stats: {
-          slow: null
-          ,average: null
-          ,mean: null
-          ,fast: null
-        }
-        ,runningTime: 0
-      }
-    ,down: {
-        results: []
-        ,first: null
-        ,last: null
-        ,stats: {
-          slow: null
-          ,average: null
-          ,mean: null
-          ,fast: null
-        }
-        ,runningTime: 0
-      }
-    ,complete: true
-    ,runningTime: 0
-    ,startTime: 0
+    return this;
   };
-  //opts.instanceResults;
-  var directions = {};
-  var k = Object.keys(results).filter(function(v) { return /[0-9]+:[0-9]+/.test(v); });
-  k.forEach(function(v) {
-    var vo = results[v];
-    var d = vo.direction;
-    directions[d] = 1;
-    if(!ro[d].first) ro[d].first = results[v];
-    if(!ro[d].last) ro[d].last = results[v];
-    if(!ro[d].stats.slow) ro[d].stats.slow = results[v];
-    //if(!ro.stats.average) ro.stats.average = results[v];
-    if(!ro[d].stats.mean) ro[d].stats.mean = results[v];
-    if(!ro[d].stats.fast) ro[d].stats.fast = results[v];
-    
-    if(!ro.startTime) ro.startTime = vo.first.startTime;
-    if(!ro.endTime) ro.endTime = vo.last.endTime;
 
-    if(results[v].first.endTime < ro[d].first.first.endTime) ro[d].first = results[v];
-    if(results[v].last.endTime < ro[d].last.last.endTime) ro[d].last = results[v];
-
-    if(ro[d].stats.slow.last.speed.Bps > results[v].last.speed.Bps) ro[d].stats.slow = results[v];
-    if(ro[d].stats.fast.last.speed.Bps < results[v].last.speed.Bps) ro[d].stats.fast = results[v];
-
-    if(ro.startTime > vo.first.startTime) ro.startTime = vo.first.startTime;
-    if(ro.endTime > vo.last.endTime) ro.startTime = vo.last.endTime;
-
-    ro[d].runningTime += vo.last.runningTime;
-    ro[d].results.push(vo);
-  });
-
-  Object.keys(directions).forEach(function(d) {
-    var speedsort = k.map(function(v) { return results[v].id; });
-    
-    speedsort.sort(function(a,b) {
-      return results[a].last.speed.Bps - results[b].last.speed.Bps;
+  Promise.create = function(f) {
+    return new Promise(f);
+  }
+  Promise.setTimeout = function PromiseSetTimeout(timer) {
+    return new Promise(function(r,x) {
+      setTimeout(r.bind(null, true), timer);
     });
-
-    //ro[d].stats.mean = ro[d].results[Math.floor(speedsort.length/2)];
-
-    ro[d].runningTime = ro[d].last.last.endTime - ro[d].first.first.startTime;
-
-    ro.runningTime += ro[d].runningTime;
-  });
-  
-
-  return ro;
-};
-
-var speedtest = (function() {
-  var st = function() {
-    this.test = {};
   };
-  var state = {
-    allresults: ko.observableArray()
-    ,currenttest: ko.observable()
-    ,conf: {
-      builtin: true
-    }
-    ,upload_data: []
-    ,createdataInterval: null
-    ,stop: ko.observable(false)
-  };
-
-  state.currenttest.extend({ notify: 'always'});
-
-  node.inherits(st, node.EventEmitter);
-  st.prototype.downtests = function(start, _id, _opts, oncomplete) {
-    
-    var self = this;
-
-    var opts = {};
-    if(_opts && typeof _opts == 'function') oncomplete = _opts;
-    if(_opts && typeof _opts == 'object') opts = _opts;
-
-    opts.upload = opts.upload || false;
-    opts.restInterval =  opts.restInterval || $("#restInterval").val();
-    opts.events = ((opts.events && opts.events.emit) ? opts.events : null) || (function() {
-      var tmp = function() {};
-      node.inherits(tmp, node.EventEmitter);
-      return new tmp();
-    })();
-    var _startTime = Date.now();
-
-    if(start > state.conf.maxDownloadSize() || state.stop()) {
-      if(state.stop()) state.stop(false);
-      if(typeof oncomplete == 'function') self.once(oncomplete);
-      if(!opts.upload) { 
-        var ro = createresultcollection(opts.instanceResults);
-        self.emit('complete', ro);
-        state.allresults.unshift(ro);
-        state.currenttest(null);
+  Promise.series = function PromiseSeries(promises) {
+    function interator(v, i, arr, varr, gr, gx) {
+      if(i == arr.length)
+        return gr(varr);
+      var p;
+      if(typeof v == 'function') {
+        p = (new Promise(v));
+      } else {
+        p = Promise.resolve(v);
       }
-      else self.uptests(opts.upload, _id, opts, oncomplete);
 
-      return;
+      p
+        .then(assignTo(varr, i))
+        .then(interator.bind(this, arr[i+1], i+1, arr, varr, gr, gx))
+        .catch(gx);
+    };
+
+    return new Promise(function(resolve, reject) {
+      var si = promises.length-1;
+      var varr = new Array(promises.length);
+      interator(promises[0], 0, promises, varr, resolve, reject);
+    });
+  };
+
+  //Promise.series([function(r) {r('u')}, 1,2,3,4]).then(console.log);
+
+  function assignTo(o, k) {
+    return function(v) {
+      o[k] = v;
+      return v;
+    };
+  }
+  function assignInline(o, k, v) {
+    return function(pv) {
+      o[k] = v;
+      return pv;
+    };
+  }
+
+  /*var tp = Promise.defered();
+  tp.then(console.log);
+  setTimeout(function() {tp.$resolve(1111); }, 1000);*/
+
+  //
+  // end pre libs
+  //
+  var $app = angular.module('app', []);
+  $app.run(function($rootScope) {
+    $rootScope.$conf = {};
+    var confLoaded = new Promise(function(resolve, reject) {
+      $.get('/conf', resolve).fail(reject);
+    });
+    confLoaded.then(assignTo($rootScope.$conf, 'limits'));
+    $rootScope.$on('uiupdate', $rootScope.$applyAsync.bind($rootScope));
+    $rootScope.$on('speedupdate', $rootScope.$applyAsync.bind($rootScope, null));
+
+    $rootScope.$loadedP = Promise.all([confLoaded]);
+    $rootScope.$loadedP.then(assignInline($rootScope, '$loaded', true)).then($rootScope.$emit.bind($rootScope, 'uiupdate'));
+
+    //window.c = confLoaded;
+  });
+
+  $app.factory('$conf', function() {
+    return new Promise(function(resolve, reject) {
+      $.get('/conf',function(d) {
+        resolve({limits: d});
+      }).fail(reject);
+    });
+  });
+
+  $app.controller('all', function($rootScope, $scope, $conf) {
+    function updateui(r) {
+      $rootScope.$applyAsync();
+      return r;
+    };
+
+    function nullfilter(v) {
+      return v != null;
     }
 
-    var tro = new testresult([_id, Date.now(), start].join(':'), 'down');
-    opts.instanceResults = opts.instanceResults || {};
-    opts.instanceResults[tro.id] = tro;
-
-    var testconn = $.ajax({
-      url: './download?size=' + start
-      ,progress: function(e) {
-        var p = ((e.loaded/e.total) * 100).toFixed(2);
-        var addi = {
-          percent: p
-          ,i: e.loaded
-          ,size: e.total || start
-          ,startTime: _startTime
-          ,endTime: Date.now()
-          ,speed: {}
-        };
-        addi.runningTime = addi.endTime - addi.startTime;
-
-        addi.speed.Bps = (addi.i/(addi.runningTime/1000));
-        addi.speed.KBps = (addi.speed.Bps/1024).toFixed(2);
-        addi.speed.MBps = (addi.speed.Bps/1024/1024).toFixed(2);
-
-        addi.speed.bps = addi.speed.Bps*8;
-        addi.speed.Kbps = (addi.speed.bps/1024).toFixed(2);
-        addi.speed.Mbps = (addi.speed.bps/1024/1024).toFixed(2);
-        addi.speed.bitrate = (function () {
-          if(addi.speed.Bps < 1024) return addi.speed.Kbps + "b";
-          if(addi.speed.Bps >= 1024 && addi.speed.Bps < 1048576) return addi.speed.Kbps + "Kb";
-          if(addi.speed.Bps >= 1048576 && addi.speed.Bps < 1073741824) return addi.speed.Mbps + "Mb";
-        })();
-        addi.speed.byterate = addi.speed.bitrate.toUpperCase();
-
-        addi.friendlySize = (function () {
-          if(addi.size < 1024) return addi.size + "b";
-          if(addi.size >= 1024 && addi.size < 1048576) return (addi.size/1024) + "KB";
-          if(addi.size >= 1048576 && addi.size < 1073741824) return (addi.size/1048576) + "MB";
-        })();
-
-        tro.adddp(addi);
-        opts.events.emit('progress', p, addi, tro);
-
-        state.currenttest(createresultcollection(JSON.parse(JSON.stringify(opts.instanceResults))));
-      }
-    }); // end init ajax
-
-    testconn.error(function() {
-      tro.error = "An error occured";
-      self.emit('error', tro);
-      opts.events.emit('error', tro);
+    $scope.results = [];
+    $scope.current = {};
+    $rootScope.$on('speedupdate', function(e, r) {
+      var k = ({up:"upload", down: "download"})[r.dir];
+      $scope.current[k][r.dir + r.size + r.start] = r;
     })
-    testconn.done(function() {
-      tro.complete = true;
-    });
-    
-    testconn.always(function() {
-      self.emit('testcomplete', tro.error, tro);
-      opts.events.emit('testcomplete', tro.error, tro);
-      var newstart = start * state.conf.downloadSizeModifier();
-      setTimeout(self.downtests.bind(self, newstart, _id, opts, oncomplete), opts.restInterval);
-    });
-  };
-
-  st.prototype.uptests = function(start, _id, _opts, oncomplete) {
-    var self = this;
-
-    var opts = {};
-    if(_opts && typeof _opts == 'function') oncomplete = _opts;
-    else if(_opts && typeof _opts == 'object') opts = _opts;
-
-    opts.restInterval =  opts.restInterval || state.conf.restInterval(); //$("#restInterval").val();
-    opts.maxUploadIterations = opts.maxUploadIterations || state.conf.maxUploadIterations();
-    opts.uploadIterations = opts.uploadIterations || 0;
-    opts.events = ((opts.events && opts.events.emit) ? opts.events : null) || (function() {
-      var tmp = function() {};
-      node.inherits(tmp, node.EventEmitter);
-      return new tmp();
-    })();
-
-    var _startTime = Date.now();
-
-    if(start > state.conf.maxUploadSize() || opts.uploadIterations >= opts.maxUploadIterations || state.stop()) {
-      if(state.stop()) state.stop(false);
-      var ro = createresultcollection(opts.instanceResults);
-
-      if(typeof oncomplete == 'function') self.once(oncomplete);
-      
-      self.emit('complete', ro);
-      state.allresults.unshift(ro);
-      state.currenttest(null);
-      return;
-    }
-
-    var tro = new testresult([_id, Date.now(), start].join(':'), 'up');
-    opts.instanceResults = opts.instanceResults || {};
-    opts.instanceResults[tro.id] = tro;
-
-    function randomInt (low, high) {
-        return Math.floor(Math.random() * (high - low) + low);
-    }
-    state.upload_data = new ArrayBuffer(start);
-    var view   = new Uint8Array(state.upload_data);
-    for(var i = 0; i < state.upload_data.length; i++) {
-        view[i] = randomInt(0,256);
-    }
-
-    var testconn = $.ajax('./upload?size=' + start, {
-        type: "post"
-        ,processData: false
-        ,contentType: "application/octet-stream"
-        ,headers: {}
-        ,progress: function(e) {
-          var p = ((e.loaded/e.total) * 100).toFixed(2);
-          var addi = {
-            percent: p
-            ,i: e.loaded
-            ,size: e.total || start
-            ,startTime: _startTime
-            ,endTime: Date.now()
-            ,speed: {}
-          };
-          addi.runningTime = addi.endTime - addi.startTime;
-
-          addi.speed.Bps = (addi.i/(addi.runningTime/1000));
-          addi.speed.KBps = (addi.speed.Bps/1024).toFixed(2);
-          addi.speed.MBps = (addi.speed.Bps/1024/1024).toFixed(2);
-
-          addi.speed.bps = addi.speed.Bps*8;
-          addi.speed.Kbps = (addi.speed.bps/1024).toFixed(2);
-          addi.speed.Mbps = (addi.speed.bps/1024/1024).toFixed(2);
-          addi.speed.bitrate = (function () {
-            if(addi.speed.Bps < 1024) return addi.speed.Kbps + "b";
-            if(addi.speed.Bps >= 1024 && addi.speed.Bps < 1048576) return addi.speed.Kbps + "Kb";
-            if(addi.speed.Bps >= 1048576 && addi.speed.Bps < 1073741824) return addi.speed.Mbps + "Mb";
-          })();
-          addi.speed.byterate = addi.speed.bitrate.toUpperCase();
-
-          addi.friendlySize = (function () {
-            if(addi.size < 1024) return addi.size + "b";
-            if(addi.size >= 1024 && addi.size < 1048576) return (addi.size/1024) + "KB";
-            if(addi.size >= 1048576 && addi.size < 1073741824) return (addi.size/1048576) + "MB";
-          })();
-
-          tro.adddp(addi);
-          opts.events.emit('progress', p, addi, tro);
-          state.currenttest(createresultcollection(JSON.parse(JSON.stringify(opts.instanceResults))));
-        }
-        ,data: state.upload_data
-    }).error(function() {
-      tro.error = "An error occured";
-      self.emit('error', tro);
-      opts.events.emit('error', tro);
-    }).done(function() {
-      tro.complete = true;
-      self.emit('testcomplete', tro.error, tro);
-      opts.events.emit('testcomplete', tro.error, tro);
-      var newstart = start * state.conf.uploadSizeModifier();
-      opts.uploadIterations++;
-      setTimeout(self.uptests.bind(self, newstart, _id, opts, oncomplete), opts.restInterval);
-    }).always(function() {
-    });
-  }; //end uptest
-
-  var sti = new st();
-  state.st = sti;
-  ko.applyBindings(state);
-  return state;
-})();
-
-$(document).ready(function() {
-    try {
-        $.get("./ip", function(res) {
-            $("#remoteip").text(res)
+    $scope.$startDownload = function() {
+      $scope.current = {download: {}};
+      $conf.then(function($conf) {
+        downloadTestPanel($rootScope, $scope, $conf).then(function(d) {
+          $scope.results.push({download: d.filter(nullfilter)});
+          return d;
+        }).then(updateui).catch(console.error).then(function() {
+          $scope.current = {}
         });
-        
-        $.get("./conf", null, function(conf) {
-            for(var prop in conf) {
-                var pi = $(document.createElement('div'));
-                var ni = $(document.createElement('input')).attr('type', 'text').attr('id', prop).attr('value', conf[prop]);
-                var li = $(document.createElement('label')).text(prop).attr("for", prop);
-                
-                ni.blur(function(ob) {
-                    $(ob.target).val(expandshortcodes($(ob.target).val()));
-                });
-                
-                pi.append(li);
-                pi.append(ni);
-                $("#config").append(pi);
-                speedtest.conf[prop] = ko.observable(conf[prop]);
-            }
-            setTimeout(function() {
-              //$('button')[1].click();
-            }, 500);
-        }, 'json');
-    } catch(e) {
-        
-    }
-});
+      })
+    };
+    $scope.$startUpload = function() {
+      $scope.current = {upload: {}};
+      return uploadTestPanel($rootScope, $scope).then(function(d) {
+        $scope.results.push({upload: d.filter(nullfilter)});
+        return d;
+      }).then(updateui).catch(console.error).then(function() {
+        $scope.current = {}
+      });
+    };
+
+    $scope.$startBoth = function() {
+      $scope.current = {upload:{}, download:{}};
+      var dl = downloadTestPanel($rootScope, $scope);
+      dl.catch(console.error);
+      dl.then(function(d) {
+        $scope.results.push({download: d.filter(nullfilter)});
+        return d;
+      }).then(updateui).then(function() {
+        return uploadTestPanel($rootScope, $scope).then(function(d) {
+          $scope.results.push({upload: d.filter(nullfilter)});
+          return d;
+        });
+      }).catch(console.error).then(updateui).then(function() {
+        $scope.current = {}
+      });
+    };
+  })
+
+  function downloadTestPanel($rootScope, $scope, $conf) {
+    var state = {
+      lastRuntime: 0
+    };
+    var conf = $conf || $rootScope.$conf;
+    return new Promise(function(resolve, reject) {
+      var tests = new Array(20);
+      tests[0] = parseInt(conf.limits.downloadStartSize);
+      for(var i = 1; i < tests.length; i++) {
+        tests[i] = tests[i-1] * conf.limits.downloadSizeModifier;
+      }
+      var testBinds = tests.filter(function(v) {
+        return v <= conf.limits.maxDownloadSize;
+      }).map(function(v) {
+        return speedTest('down', Math.floor(v), $rootScope, conf, state);
+      });
+
+      Promise.series(testBinds).then(function(results) {
+        $rootScope.$emit('speedtestpanelfinish', results);
+        return results;
+      }).then(resolve).catch(reject);
+    });
+  }
+
+  function uploadTestPanel($rootScope, $scope, $conf) {
+    var state = {
+      lastRuntime: 0
+    };
+    var conf = $conf || $rootScope.$conf;
+    return new Promise(function(resolve, reject) {
+      var tests = new Array(10);
+      tests[0] = parseInt(conf.limits.uploadStartSize);
+      for(var i = 1; i < tests.length; i++) {
+        tests[i] = tests[i-1] * conf.limits.uploadSizeModifier;
+      }
+      var testBinds = tests.filter(function(v) {
+        return v <= conf.limits.maxUploadSize;
+      }).map(function(v) {
+        return speedTest('up', Math.floor(v), $rootScope, conf, state);
+      });
+
+      Promise.series(testBinds).then(function(results) {
+        $rootScope.$emit('speedtestpanelfinish', results);
+        return results;
+      }).then(resolve).catch(reject);
+    });
+  }
+
+  function speedTest($dir, $size, $rootScope, $conf, $state) {
+    function calc(results, e) {
+      e || (e = {
+        loaded: $size,
+        total: $size
+      });
+      results.dl = e.loaded;
+      results.end = Date.now();
+      results.time = results.end-results.start;
+      results.percent = ((e.loaded/(e.total || $size)) * 100);
+
+      var bpms = (results.dl*8)/(results.time);
+      results.speed.bps = bpms*1000;
+      results.speed.kbps = (bpms/1000)*1000;
+      results.speed.mbps = (bpms/1000/1000)*1000;
+      results.speed.gbps = (bpms/1000/1000/1000)*1000;
+
+      results.bitrate = results.speed.bps;
+      results.bittype =  'b'
+
+      if(results.speed.kbps > 1) {
+        results.bitrate = results.speed.kbps;
+        results.bittype = 'Kb';
+      }
+      if(results.speed.mbps > 1) {
+        results.bitrate = results.speed.mbps;
+        results.bittype = 'Mb';
+      }
+      if(results.speed.gbps > 1) {
+        results.bitrate = results.speed.gbps;
+        results.bittype = 'Gb';
+      }
+
+      var fdlsize = (function (b) {
+        if(b < 1000) return b + "b";
+        if(b >= 1000 && b < 1000000) return (b/1000) + "KB";
+        if(b >= 1000000 && b < 1000000000) return (b/1000000) + "MB";
+        if(b >= 1000000000) return (b/1000000000) + "GB";
+      })(results.dl);
+
+      (function(f) {
+        results.fdl = new Number(f.replace(/[a-z]/gi, ''));
+        results.fdltype = f.replace(/[0-9\.]/gi, '');
+      })(fdlsize);
+
+      var fsize = (function (b) {
+        if(b < 1000) return b + "b";
+        if(b >= 1000 && b < 1000000) return (b/1000) + "KB";
+        if(b >= 1000000 && b < 1000000000) return (b/1000000) + "MB";
+        if(b >= 1000000000) return (b/1000000000) + "GB";
+      })(results.size);
+
+      (function(f) {
+        results.fsize = new Number(f.replace(/[a-z]/gi, ''));
+        results.fsizetype = f.replace(/[0-9\.]/gi, '');
+      })(fsize);
+    };
+    var results = {
+      dir: $dir,
+      start: Date.now(),
+      end: 0,
+      size: $size,
+      dl: 0,
+      percent: 0,
+      time: 0,
+      speed: {
+        bps: 0,
+        kbps: 0,
+        mbps: 0,
+      },
+      bitrate: 'b'
+    };
+
+    return function(r, x) {
+      if($dir == 'down' && $state.lastRuntime > ($conf.limits.maxDownloadTime*1000))
+        return r(null);
+      if($dir == 'up' && $state.lastRuntime > ($conf.limits.maxUploadTime*1000))
+        return r(null);
+      results.start = Date.now();
+      var ropts = {
+        url: './'+$dir+'load?size=' + $size
+        ,method: ($dir == 'down') ? 'GET' : 'POST'
+        ,progress: function(e) {
+          calc(results, e);
+          $rootScope.$emit('speedupdate', results);
+        }
+      };
+      if($dir == "up") {
+        var ua = new Uint8Array($size);
+        ua.fill(0);
+        ropts.data = new Blob([ua]);
+        ropts.processData = false;
+        ropts.contentType = "application/octet-stream";
+      }
+
+      var j = $.ajax(ropts);
+      j.done(function() {
+        calc(results);
+        $state.lastRuntime = results.time;
+        $rootScope.$emit('speedupdate', results);
+        r(results);
+      }).fail(x);
+    };
+  }
+})();

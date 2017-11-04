@@ -1,0 +1,63 @@
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="./speed.css">
+
+<title>NodeJS HTTP Speedtest: All for WAN and WAN for all</title>
+</head>
+<body ng-app="app">
+  <div ng-controller="all">
+    <div id="jswarning" data-bind="visible: !st">You need to use a browser that supports Javascript and AJAX.</div>
+    <div ng-hide="!!!$loaded">
+      <button ng-click="$startDownload()" class="download">Download</button>
+      <button ng-click="$startUpload()">Upload</button>
+      <button ng-click="$startBoth()">Both</button>
+      <!--<button data-bind="click: $root.stop.bind($root.stop, true)">Stop</button>-->
+      <button ng-click="$clearResults()">Clear results</button>
+
+      <div>
+
+        <h3 ng-show="!!current.upload && !!!current.download">Upload test</h3>
+        <h3 ng-show="!!current.download && !!!current.upload">Download test</h3>
+        <h3 ng-show="!!current.download && !!current.upload">Download/Upload test</h3>
+        <ul>
+          <li ng-repeat="step in current.download">
+            <span ng-show="step.dir=='up'">&and;</span>
+            <span ng-show="step.dir=='down'">&or;</span>
+            {{step.fsize.toFixed(2)}}{{step.fsizetype}} {{step.percent.toFixed(0)}}% in {{step.time}}ms ({{step.bitrate.toFixed(2)}}{{step.bittype}}ps)
+          </li>
+          <li ng-repeat="step in current.upload">
+            <span ng-show="step.dir=='up'">&and;</span>
+            <span ng-show="step.dir=='down'">&or;</span>
+            {{step.fsize.toFixed(2)}}{{step.fsizetype}} {{step.percent.toFixed(0)}}% in {{step.time}}ms ({{step.bitrate.toFixed(2)}}{{step.bittype}}ps)
+          </li>
+        </ul>
+      </div>
+
+      <div ng-repeat="result in results">
+        <h3 ng-show="!!result.upload">Upload test</h3>
+        <h3 ng-show="!!result.download">Download test</h3>
+
+        <div>
+            <ul>
+              <li ng-repeat="step in (result.download||[]).concat(result.upload || [])">
+
+                  <span ng-show="step.dir=='up'">&and;</span>
+                  <span ng-show="step.dir=='down'">&or;</span>
+                  {{step.fsize.toFixed(2)}}{{step.fsizetype}} {{step.percent.toFixed(0)}}% in {{step.time}}ms ({{step.bitrate.toFixed(2)}}{{step.bittype}}ps)
+              </li>
+            </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/ng-template" id="/results.html">
+
+  </script>
+
+  <script type="application/javascript" src="./jquery-3.2.1.min.js" ></script>
+  <script type="application/javascript" src="./jquery.ajax-progress.js" ></script>
+  <script type="application/javascript" src="./angular.min.js"></script>
+  <script type="application/javascript" src="./speed.js"></script>
+</body>
+</html>
