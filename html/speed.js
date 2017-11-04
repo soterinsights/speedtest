@@ -75,7 +75,7 @@
     }, []);
   }
 
-  console.log(arrayFlatten([1,2,3,4,[1,2,3,4,5,[8,9,0]]]))
+  //console.log(arrayFlatten([1,2,3,4,[1,2,3,4,5,[8,9,0]]]))
 
   //
   // end pre libs

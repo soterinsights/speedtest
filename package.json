@@ -1,27 +1,27 @@
 {
   "name": "speedtest"
-  ,"author": "Josh Erickson <josh@snoj.us>"
-  ,"description": "A simple http speed test for private networks."
-  ,"version": "0.3.0"
-  ,"contributors": [ 
+  ,"author": "Josh Erickson <josh@snoj.us>",
+  "description": "A simple http speed test for private networks.",
+  "version": "1.0.0",
+  "contributors": [
     {
       "name": "Josh Erickson",
       "email": "josh@snoj.us"
-    } 
-  ]
-  ,"keywords": [
+    }
+  ],
+  "keywords": [
     "http"
     ,"speed test"
-  ]
-  ,"scripts": {
+  ],
+  "scripts": {
     "start": "node ./bin/speed.js"
-  }
-  ,"repository": {
+  },
+  "repository": {
     "type": "git",
-    "url": "https://github.com/snoj/speedtest.git"
-  }
-  ,"license": "MIT"
-  ,"engines": {
+    "url": "https://github.com/soterinsights/speedtest.git"
+  },
+  "license": "MIT",
+  "engines": {
     "node": ">=0.8.16"
   }
 }
