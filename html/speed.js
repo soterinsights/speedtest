@@ -152,7 +152,7 @@
         return;
       $scope.current = {download: {}, all:{}};
       $conf.then(function($conf) {
-        downloadTestPanel($rootScope, $scope, $conf).then(function(d) {
+        downloadTestPanel($rootScope, $conf).then(function(d) {
           //$scope.results.push({download: d.filter(nullfilter)});
           //$scope.results.push($scope.current);
           $scope.results = $scope.results.concat(flattenResults($scope.current));
@@ -163,11 +163,12 @@
         });
       })
     };
+
     $scope.$startUpload = function() {
       if(!!$scope.current.all)
         return;
       $scope.current = {upload: {}, all: {}};
-      return uploadTestPanel($rootScope, $scope).then(function(d) {
+      return uploadTestPanel($rootScope).then(function(d) {
         //$scope.results.push({upload: d.filter(nullfilter)});
         //$scope.results.push($scope.current);
         $scope.results = $scope.results.concat(flattenResults($scope.current));
@@ -182,12 +183,12 @@
       if(!!$scope.current.all)
         return;
       $scope.current = {upload:{}, download:{}, all: {}};
-      var dl = downloadTestPanel($rootScope, $scope);
+      var dl = downloadTestPanel($rootScope);
       dl.catch(console.error);
       dl.then(function(d) {
         return d;
       }).then(updateui).then(function() {
-        return uploadTestPanel($rootScope, $scope).then(function(d) {
+        return uploadTestPanel($rootScope).then(function(d) {
           //$scope.results.push({upload: d.filter(nullfilter)});
           //$scope.results.push($scope.current);
           $scope.results = $scope.results.concat(flattenResults($scope.current));
@@ -199,6 +200,26 @@
       }).catch(console.error);
     };
 
+    $scope.$startDownloadStress = function() {
+      $scope.current = {download: {}, all:{}};
+      downloadStressTest($rootScope).then(function(res) {
+        $scope.results = $scope.results.concat(flattenResults($scope.current));
+        delete $scope.current;
+        $scope.current = {};
+        return res;
+      }).then(updateui);
+    };
+
+    $scope.$startUploadStress = function() {
+      $scope.current = {upload: {}, all:{}};
+      uploadStressTest($rootScope).then(function(res) {
+        $scope.results = $scope.results.concat(flattenResults($scope.current));
+        delete $scope.current;
+        $scope.current = {};
+        return res;
+      }).then(updateui);
+    };
+
     $scope.$clearResults = function() {
       if(!!$scope.current.all)
         return;
@@ -207,7 +228,79 @@
     };
   })
 
-  function downloadTestPanel($rootScope, $scope, $conf) {
+  function downloadStressTest($rootScope, $conf) {
+    var confcopy = _.cloneDeep($conf || $rootScope.$conf);
+    confcopy.state || (confcopy.state = {});
+    _.defaults(confcopy.state, {
+      lastbitrate: 0,
+      stop: false
+    });
+    return new Promise(function(resolve, reject) {
+      if(!!confcopy.state.stop)
+        return resolve();
+
+      setTimeout(function() {
+        downloadTestPanel($rootScope, confcopy).then(function(res) {
+
+          var p = _.sortBy(res, 'speed.bps')
+          _.reverse(p);
+          p = _.slice(p, 0, 4);
+          var max = _.maxBy(p, 'speed.bps');
+          var min = _.minBy(p, 'speed.bps');
+          if( (min.speed.bps/max.speed.bps) < 0.9) {
+            confcopy.limits.downloadStartSize = _.maxBy(p, 'size').size;
+            confcopy.limits.downloadSizeModifier = 1.1;
+            downloadStressTest($rootScope, confcopy).then(resolve);
+          } else {
+            confcopy.state.stop = true;
+            resolve();
+          }
+
+        }).catch(reject);
+      }, 1);
+    });
+
+  } // end download stress
+
+  function uploadStressTest($rootScope, $conf) {
+    var confcopy = _.cloneDeep($conf || $rootScope.$conf);
+    confcopy.state || (confcopy.state = {});
+    _.defaults(confcopy.state, {
+      lastbitrate: 0,
+      stop: false
+    });
+    return new Promise(function(resolve, reject) {
+      if(!!confcopy.state.stop)
+        return resolve();
+
+      setTimeout(function() {
+        uploadTestPanel($rootScope, confcopy).then(function(res) {
+          try {
+            var p = _.sortBy(res, 'speed.bps')
+            _.reverse(p);
+            p = _.slice(p, 0, 4);
+            var max = _.maxBy(p, 'speed.bps');
+            var min = _.minBy(p, 'speed.bps');
+            if( (min.speed.bps/max.speed.bps) < 0.9) {
+              confcopy.limits.uploadStartSize = _.maxBy(p, 'size').size;
+              confcopy.limits.uploadSizeModifier = 1.1;
+              uploadStressTest($rootScope, confcopy).then(resolve);
+            } else {
+              confcopy.state.stop = true;
+              resolve();
+            }
+
+          } catch(ex) {
+            resolve();
+          }
+
+        }).catch(reject);
+      }, 1);
+    });
+
+  } // end upload stress
+
+  function downloadTestPanel($rootScope, $conf) {
     var state = {
       lastRuntime: 0
     };
@@ -231,7 +324,7 @@
     });
   }
 
-  function uploadTestPanel($rootScope, $scope, $conf) {
+  function uploadTestPanel($rootScope, $conf) {
     var state = {
       lastRuntime: 0
     };
