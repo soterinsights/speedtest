@@ -129,6 +129,17 @@
       return v != null;
     }
 
+    function moveCurrent2Result(d) {
+      $scope.results = $scope.results.concat(flattenResults($scope.current));
+      return d;
+    }
+
+    function resetCurrent(d) {
+      delete $scope.current;
+      $scope.current = {};
+      return d;
+    }
+
     $scope.results = [];
 
     function flattenResults(o) {
@@ -152,15 +163,13 @@
         return;
       $scope.current = {download: {}, all:{}};
       $conf.then(function($conf) {
-        downloadTestPanel($rootScope, $conf).then(function(d) {
-          //$scope.results.push({download: d.filter(nullfilter)});
-          //$scope.results.push($scope.current);
-          $scope.results = $scope.results.concat(flattenResults($scope.current));
-          return d;
-        }).then(updateui).catch(console.error).then(function() {
-          delete $scope.current
-          $scope.current = {};
-        });
+        downloadTestPanel($rootScope, $conf)
+          .then(moveCurrent2Result)
+          .then(resetCurrent)
+          .then(updateui)
+          .catch(moveCurrent2Result)
+          .catch(resetCurrent)
+          .catch(updateui);
       })
     };
 
@@ -168,15 +177,13 @@
       if(!!$scope.current.all)
         return;
       $scope.current = {upload: {}, all: {}};
-      return uploadTestPanel($rootScope).then(function(d) {
-        //$scope.results.push({upload: d.filter(nullfilter)});
-        //$scope.results.push($scope.current);
-        $scope.results = $scope.results.concat(flattenResults($scope.current));
-        return d;
-      }).catch(console.error).then(function() {
-        delete $scope.current
-        $scope.current = {};
-      }).then(updateui);
+      return uploadTestPanel($rootScope)
+        .then(moveCurrent2Result)
+        .then(resetCurrent)
+        .then(updateui)
+        .catch(moveCurrent2Result)
+        .catch(resetCurrent)
+        .catch(updateui);
     };
 
     $scope.$startBoth = function() {
@@ -184,20 +191,19 @@
         return;
       $scope.current = {upload:{}, download:{}, all: {}};
       var dl = downloadTestPanel($rootScope);
-      dl.catch(console.error);
-      dl.then(function(d) {
-        return d;
-      }).then(updateui).then(function() {
-        return uploadTestPanel($rootScope).then(function(d) {
-          //$scope.results.push({upload: d.filter(nullfilter)});
-          //$scope.results.push($scope.current);
-          $scope.results = $scope.results.concat(flattenResults($scope.current));
-          return d;
-        }).then(function() {
-          delete $scope.current
-          $scope.current = {}
-        }).then(updateui);
-      }).catch(console.error);
+
+      dl.catch(moveCurrent2Result)
+        .catch(resetCurrent)
+        .catch(updateui);
+      dl.then(updateui).then(function() {
+        return uploadTestPanel($rootScope)
+          .then(moveCurrent2Result)
+          .then(resetCurrent)
+          .then(updateui)
+          .catch(moveCurrent2Result)
+          .catch(resetCurrent)
+          .catch(updateui)
+      });
     };
 
     $scope.$startDownloadStress = function() {
@@ -219,6 +225,38 @@
         return res;
       }).then(updateui);
     };
+
+    $scope.$downloadCSV = function() {
+      console.log($scope.results);
+      var csvopts = [
+        {k:'dir', l: 'Direction'},
+        {k:'size', l:'Size'},
+        {k:'dl', l:'Bytes Downloaded'},
+        {k:'percent', l:'Percent Completed'},
+        {k:'time', l:'Time (ms)'},
+        {k:'start', l:'Timestamp'},
+        {k:'speed.bps', l:'bps'},
+        {k:'speed.kbps', l:'Kbps'},
+        {k:'speed.mbps', l:'Mbps'},
+        {k:'speed.gbps', l:'Gbps'},
+        'bitrate',
+        'bittype'
+      ];
+      var csv = (json2csv($scope.results, csvopts));
+      var f = new Blob([csv],{type: 'text/csv'});
+
+      var dl = $('<a />');
+      dl.attr('download', "speedtest_results.csv");
+      var burl = URL.createObjectURL(f);
+      dl.attr('href', burl);
+      dl[0].click();
+      window.URL.revokeObjectURL(burl);
+    };
+
+
+    $scope.$stopTests = function() {
+      $rootScope.$testxhr.$st_abort();
+    }
 
     $scope.$clearResults = function() {
       if(!!$scope.current.all)
@@ -424,10 +462,14 @@
     };
 
     return function(r, x) {
+      if(!!$state.stopped) {
+        r(null);
+      }
       if($dir == 'down' && $state.lastRuntime > ($conf.limits.maxDownloadTime*1000))
         return r(null);
       if($dir == 'up' && $state.lastRuntime > ($conf.limits.maxUploadTime*1000))
         return r(null);
+
       results.start = Date.now();
       var ropts = {
         url: './'+$dir+'load?size=' + $size
@@ -446,6 +488,12 @@
       }
 
       var j = $.ajax(ropts);
+      j.$st_abort = function() {
+        $state.stopped = true;
+        j.abort();
+      };
+      $rootScope.$testxhr = j;
+
       j.done(function() {
         calc(results);
         $state.lastRuntime = results.time;

@@ -14,9 +14,10 @@
       <button ng-click="$startDownload()" class="download" ng-disabled="!!current.all">Download</button>
       <button ng-click="$startUpload()" ng-disabled="!!current.all">Upload</button>
       <button ng-click="$startBoth()" ng-disabled="!!current.all">Both</button>
-      <!--<button data-bind="click: $root.stop.bind($root.stop, true)">Stop</button>-->
+      <button ng-click="$stopTests();" ng-disabled="!!!current.all">Stop</button>
       <button ng-click="$startDownloadStress()" class="download" ng-disabled="!!current.all">Download Stress</button>
       <button ng-click="$startUploadStress()" class="download" ng-disabled="!!current.all">Upload Stress</button>
+      <button ng-click="$downloadCSV()" ng-disabled="!!!results.length">CSV</button>
       <button ng-click="$clearResults()" ng-disabled="!!current.all">Clear results</button>
 
       <div class="tableout">
@@ -63,6 +64,7 @@
   <script type="application/javascript" src="./jquery-3.2.1.min.js" ></script>
   <script type="application/javascript" src="./jquery.ajax-progress.js" ></script>
   <script type="application/javascript" src="./lodash.min.js"></script>
+  <script type="application/javascript" src="./json2csv.js"></script>
   <script type="application/javascript" src="./angular.min.js"></script>
   <script type="application/javascript" src="./speed.js"></script>
 </body>
