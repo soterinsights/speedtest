@@ -1,0 +1,5 @@
+{
+  "name"   : "speedtest",
+  "script" : "./start.js",
+  "watch": ["bin/"]
+}
