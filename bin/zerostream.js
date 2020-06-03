@@ -1,7 +1,7 @@
 var stream = require('stream')
 var inherits = require('util').inherits
 
-var BLANK = new Buffer(65536)
+var BLANK = Buffer.alloc(65536)
 BLANK.fill(0)
 
 module.exports = ZeroStream
